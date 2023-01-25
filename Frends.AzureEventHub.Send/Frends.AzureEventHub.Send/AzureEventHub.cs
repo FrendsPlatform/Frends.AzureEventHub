@@ -16,9 +16,9 @@ public static class AzureEventHub
 {
     /// <summary>
     /// Reads text and replaces substring(s) matching with specified regular expression.
-    /// [Documentation](https://tasks.frends.com/tasks/frends-tasks/Frends.Regex.Replace)
+    /// [Documentation](https://tasks.frends.com/tasks/frends-tasks/Frends.AzureEventHub.Send)
     /// </summary>
-    /// <returns>string ReplacedText</returns>
+    /// <returns>{ bool Success, string Message }</returns>
     public static async Task<Result> Send(
         [PropertyTab] Input input,
         [PropertyTab] Options options,
