@@ -76,14 +76,14 @@ public static class AzureEventHub
     {
         return new EventHubProducerClientOptions {
             ConnectionOptions = new EventHubConnectionOptions {
-                TransportType = options.NativeClientTransportType
+                TransportType = options.GetNativeClientTransportType()
             },
             RetryOptions = new EventHubsRetryOptions {
                 MaximumRetries = options.MaximumRetries,
                 Delay = TimeSpan.FromMilliseconds(options.DelayInMilliseconds),
                 MaximumDelay = TimeSpan.FromMilliseconds(options.MaximumDelayInMilliseconds),
                 TryTimeout = TimeSpan.FromMilliseconds(options.TryTimeoutInMilliseconds),
-                Mode = options.NativeClientRetryMode
+                Mode = options.GetNativeClientRetryMode()
             }
         };
     }

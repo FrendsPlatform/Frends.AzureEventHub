@@ -49,35 +49,31 @@ public class Options
     /// </summary>
     public TransportType TransportType { get; set; } = TransportType.AmqpTcp;
 
-    internal EventHubsRetryMode NativeClientRetryMode
+    // Do not make this into a property, Frends UI shows internal properties for some reason
+    internal EventHubsRetryMode GetNativeClientRetryMode()
     {
-        get
+        switch (RetryMode)
         {
-            switch (RetryMode)
-            {
-                case RetryMode.Exponential:
-                    return EventHubsRetryMode.Exponential;
-                case RetryMode.Fixed:
-                    return EventHubsRetryMode.Fixed;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(RetryMode), RetryMode, null);
-            }
+            case RetryMode.Exponential:
+                return EventHubsRetryMode.Exponential;
+            case RetryMode.Fixed:
+                return EventHubsRetryMode.Fixed;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(RetryMode), RetryMode, null);
         }
     }
 
-    internal EventHubsTransportType NativeClientTransportType
+    // Do not make this into a property, Frends UI shows internal properties for some reason
+    internal EventHubsTransportType GetNativeClientTransportType()
     {
-        get
+        switch (TransportType)
         {
-            switch (TransportType)
-            {
-                case TransportType.AmqpTcp:
-                    return EventHubsTransportType.AmqpTcp;
-                case TransportType.AmqpWebSockets:
-                    return EventHubsTransportType.AmqpWebSockets;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(TransportType), TransportType, null);
-            }
+            case TransportType.AmqpTcp:
+                return EventHubsTransportType.AmqpTcp;
+            case TransportType.AmqpWebSockets:
+                return EventHubsTransportType.AmqpWebSockets;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(TransportType), TransportType, null);
         }
     }
 }
