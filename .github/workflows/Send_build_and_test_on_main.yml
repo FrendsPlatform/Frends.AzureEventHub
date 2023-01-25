@@ -1,0 +1,19 @@
+name: Frends.AzureEventHub.Send Main
+
+on:
+  push:
+    branches:    
+      - main
+    paths:
+      - 'Frends.AzureEventHub.Send/**'
+  workflow_dispatch:
+  
+jobs:
+  build:
+    uses: FrendsPlatform/FrendsTasks/.github/workflows/linux_build_main.yml@main
+    with:
+      workdir: Frends.AzureEventHub.Send
+      env_var_name_1: EVENT_HUB_CONNECTION_STRING
+    secrets:
+      badge_service_api_key: ${{ secrets.BADGE_SERVICE_API_KEY }}
+      env_var_value_1: ${{ secrets.EVENT_HUB_CONNECTION_STRING }}

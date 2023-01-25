@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32014.148
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Frends.AzureEventHub.Send", "Frends.AzureEventHub.Send\Frends.AzureEventHub.Send.csproj", "{CA8CEFF6-9D5A-4E84-AAD8-A9450A058AB1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Frends.AzureEventHub.Send.Tests", "Frends.AzureEventHub.Send.Tests\Frends.AzureEventHub.Send.Tests.csproj", "{4B7A9A13-2969-420C-8B04-A05F590FE6C3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{82F19A1C-16F9-43C5-814A-D7BEE320504D}"
+	ProjectSection(SolutionItems) = preProject
+		CHANGELOG.md = CHANGELOG.md
+		README.md = README.md
+		..\.github\workflows\Replace_build_and_test_on_main.yml = ..\.github\workflows\Replace_build_and_test_on_main.yml
+		..\.github\workflows\Replace_build_and_test_on_push.yml = ..\.github\workflows\Replace_build_and_test_on_push.yml
+		..\.github\workflows\Replace_release.yml = ..\.github\workflows\Replace_release.yml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CA8CEFF6-9D5A-4E84-AAD8-A9450A058AB1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA8CEFF6-9D5A-4E84-AAD8-A9450A058AB1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA8CEFF6-9D5A-4E84-AAD8-A9450A058AB1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA8CEFF6-9D5A-4E84-AAD8-A9450A058AB1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4B7A9A13-2969-420C-8B04-A05F590FE6C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4B7A9A13-2969-420C-8B04-A05F590FE6C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4B7A9A13-2969-420C-8B04-A05F590FE6C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4B7A9A13-2969-420C-8B04-A05F590FE6C3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EE09B815-C974-4788-AF9F-A3E76AA1C225}
+	EndGlobalSection
+EndGlobal
