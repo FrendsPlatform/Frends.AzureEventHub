@@ -15,7 +15,7 @@ class Send
 
     public Send()
     {
-        _connectionString = "Endpoint=sb://eh-task-development.servicebus.windows.net/;SharedAccessKeyName=send;SharedAccessKey=5IZiQSeMqjfYlC+4zqGE/wBIdD1N/SudNOXVHmrijC0=;EntityPath=the-hub";// System.Environment.GetEnvironmentVariable("EVENT_HUB_CONNECTION_STRING");
+        _connectionString = Environment.GetEnvironmentVariable("EVENT_HUB_CONNECTION_STRING");
     }
 
     [Test]
