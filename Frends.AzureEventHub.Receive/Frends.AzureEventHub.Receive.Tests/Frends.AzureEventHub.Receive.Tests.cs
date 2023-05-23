@@ -20,7 +20,7 @@ namespace Frends.AzureEventHub.Receive.Tests;
 [TestFixture]
 class Receive
 {
-    private static Consumer _consumer;
+    private static Consumer _consumer; 
     private static Checkpoint _checkpoint;
     private static Options _options;
     private readonly string _storageAccount = "testsorage01";
