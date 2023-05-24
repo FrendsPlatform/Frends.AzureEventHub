@@ -14,7 +14,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
-
 namespace Frends.AzureEventHub.Receive.Tests;
 
 [TestFixture]
