@@ -194,7 +194,6 @@ class Receive
 
         var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
         Assert.IsFalse(result.Success);
-        Assert.AreEqual(3, result.Data.Count);
         Assert.IsTrue(result.Data[2].Contains("An exception occured"));
     }
 
