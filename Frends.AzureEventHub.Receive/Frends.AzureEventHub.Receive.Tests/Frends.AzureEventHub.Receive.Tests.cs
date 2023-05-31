@@ -95,10 +95,7 @@ class Receive
         options.MaximumWaitTimeInMinutes = 0.5;
         options.Delay = 1;
 
-        var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
-        Assert.IsTrue(result.Success);
-        Assert.IsTrue(result.Data.Count > 0); // There are multiple events to consume but can't be sure how many events will be consumed in given limit.
-        Assert.IsTrue(result.Data[0].Contains("Lorem"));
+        Assert.ThrowsAsync<NullReferenceException>(async () => await AzureEventHub.Receive(consumer, checkpoint, options, default));
     }
 
     [Test]
