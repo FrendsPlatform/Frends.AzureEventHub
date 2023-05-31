@@ -33,6 +33,7 @@ public class Checkpoint
     /// A connection string.
     /// </summary>
     /// <example>DefaultEndpointsProtocol=https;AccountName=accountname;AccountKey=Pdlrxyz==;EndpointSuffix=core.windows.net</example>
+    [DisplayFormat(DataFormatString = "Text")]
     [UIHint(nameof(AuthenticationMethod), "", AuthenticationMethod.ConnectionString)]
     [PasswordPropertyText]
     public string ConnectionString { get; set; }
@@ -48,6 +49,7 @@ public class Checkpoint
     /// Shared access signature.
     /// </summary>
     /// <example>sv=2021-04-10&amp;se=2022-04-10T10%3A431Z&amp;sr=c&amp;sp=l&amp;sig=ZJg9aovE%2BZXI</example>
+    [DisplayFormat(DataFormatString = "Text")]
     [UIHint(nameof(AuthenticationMethod), "", AuthenticationMethod.SASToken)]
     [PasswordPropertyText]
     public string SASToken { get; set; }
@@ -56,6 +58,7 @@ public class Checkpoint
     /// The Azure Active Directory tenant (directory) Id.
     /// </summary>
     /// <example>Y6b1hf2a-80e2-xyz2-qwer3h-3a7c3a8as4b7f</example>
+    [DisplayFormat(DataFormatString = "Text")]
     [UIHint(nameof(AuthenticationMethod), "", AuthenticationMethod.OAuth2)]
     [PasswordPropertyText]
     public string TenantId { get; set; }

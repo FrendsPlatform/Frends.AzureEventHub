@@ -23,6 +23,10 @@ public static class AzureEventHub
     /// Receive events from Azure Event Hub.
     /// [Documentation](https://tasks.frends.com/tasks/frends-tasks/Frends.AzureEventHub.Receive)
     /// </summary>
+    /// <param name="consumer">Consumer parameters.</param>
+    /// <param name="checkpoint">Checkpoint parameters.</param>
+    /// <param name="options">Optional parameters.</param>
+    /// <param name="cancellationToken">Token received from Frends to cancel this Task.</param>
     /// <returns>Object { bool Success, List&lt;dynamic&gt; Data }</returns>
     public static async Task<Result> Receive([PropertyTab] Consumer consumer, [PropertyTab] Checkpoint checkpoint, [PropertyTab] Options options, CancellationToken cancellationToken)
     {
@@ -61,7 +65,7 @@ public static class AzureEventHub
 
             processorClient.ProcessErrorAsync += async (args) =>
             {
-                var ex = @$"Partition {args.PartitionId}, Exception: {args.Exception}";
+                var ex = $"Partition {args.PartitionId}, Exception: {args.Exception}";
 
                 if (options.ExceptionHandler is ExceptionHandlers.Info)
                 {
@@ -76,18 +80,14 @@ public static class AzureEventHub
 
             while (!stopProcessing)
                 await Task.Delay(TimeSpan.FromSeconds(options.Delay), cancellationToken);
-
-            //if (processorClient.IsRunning)
-            //    await processorClient.StopProcessingAsync(cancellationToken);
-
         }
         catch (Exception ex)
         {
             if (options.ExceptionHandler is ExceptionHandlers.Throw)
-                throw new Exception($@"{ex}");
+                throw new Exception($"{ex.Message}");
             else
             {
-                results.Add(@$"An exception occured: {ex}");
+                results.Add($"An exception occured: {ex}");
                 return new Result(false, results);
             }
         }

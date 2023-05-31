@@ -33,6 +33,7 @@ public class Consumer
     /// The connection string.
     /// </summary>
     /// <example>Endpoint=sb://NamespaceName.servicebus.windows.net/;SharedAccessKeyName=KeyName;SharedAccessKey=KeyValue</example>
+    [DisplayFormat(DataFormatString = "Text")]
     [UIHint(nameof(AuthenticationMethod), "", AuthenticationMethod.ConnectionString)]
     [PasswordPropertyText]
     public string ConnectionString { get; set; }
@@ -49,6 +50,7 @@ public class Consumer
     /// Access controls may be specified by the Event Hubs namespace or the requested Event Hub, depending on Azure configuration.
     /// </summary>
     /// <example>sv=2021-04-10&amp;se=2022-04-10T10%3A431Z&amp;sr=c&amp;sp=l&amp;sig=ZJg983RovE%2BZXI</example>
+    [DisplayFormat(DataFormatString = "Text")]
     [UIHint(nameof(AuthenticationMethod), "", AuthenticationMethod.SASToken)]
     [PasswordPropertyText]
     public string SASToken { get; set; }
@@ -57,6 +59,7 @@ public class Consumer
     /// The Azure Active Directory tenant (directory) Id.
     /// </summary>
     /// <example>Y6b1hf2a-80e2-xyz2-qwer3h-3a7c3a8as4b7f</example>
+    [DisplayFormat(DataFormatString = "Text")]
     [UIHint(nameof(AuthenticationMethod), "", AuthenticationMethod.OAuth2)]
     [PasswordPropertyText]
     public string TenantId { get; set; }
@@ -65,6 +68,7 @@ public class Consumer
     /// The client (application) ID.
     /// </summary>
     /// <example>Y6b1hf2a-80e2-xyz2-qwer3h-3a7c3a8as4b7f</example>
+    [DisplayFormat(DataFormatString = "Text")]
     [UIHint(nameof(AuthenticationMethod), "", AuthenticationMethod.OAuth2)]
     [PasswordPropertyText]
     public string ClientId { get; set; }
@@ -73,6 +77,7 @@ public class Consumer
     /// A client secret that was generated for the App Registration used to authenticate the client.
     /// </summary>
     /// <example>Password</example>
+    [DisplayFormat(DataFormatString = "Text")]
     [UIHint(nameof(AuthenticationMethod), "", AuthenticationMethod.OAuth2)]
     [PasswordPropertyText]
     public string ClientSecret { get; set; }
@@ -80,6 +85,6 @@ public class Consumer
     /// <summary>
     /// The maximum amount of time to wait for an event to become available for a given partition before emitting an empty event.
     /// </summary>
-    /// <example>10</example>
+    /// <example>10 , 10.1</example>
     public double MaximumWaitTime { get; set; }
 }

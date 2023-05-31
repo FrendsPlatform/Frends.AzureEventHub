@@ -5,11 +5,20 @@
 /// </summary>
 public enum AuthenticationMethod
 {
-#pragma warning disable CS1591 // self explanatory.
+    /// <summary>
+    /// Connection string.
+    /// </summary>
     ConnectionString,
+
+    /// <summary>
+    /// SAS Token.
+    /// </summary>
     SASToken,
+
+    /// <summary>
+    /// OAuth2.
+    /// </summary>
     OAuth2
-#pragma warning restore CS1591 // self explanatory
 }
 
 /// <summary>
