@@ -19,7 +19,7 @@ namespace Frends.AzureEventHub.Receive.Tests;
 [TestFixture]
 class Receive
 {
-    private static Consumer _consumer; 
+    private static Consumer _consumer;
     private static Checkpoint _checkpoint;
     private static Options _options;
     private readonly string _storageAccount = "testsorage01";
@@ -83,6 +83,22 @@ class Receive
         var blobServiceClient = new BlobServiceClient(_blobStorageConnectionString);
         var container = blobServiceClient.GetBlobContainerClient(_containerName);
         await container.DeleteIfExistsAsync(null);
+    }
+
+    [Test]
+    public async Task ReceiveEvents_CheckpointCS_MissingCS()
+    {
+        var consumer = _consumer;
+        consumer.ConnectionString = "";
+        var checkpoint = _checkpoint;
+        var options = _options;
+        options.MaximumWaitTimeInMinutes = 0.5;
+        options.Delay = 1;
+
+        var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
+        Assert.IsTrue(result.Success);
+        Assert.IsTrue(result.Data.Count > 0); // There are multiple events to consume but can't be sure how many events will be consumed in given limit.
+        Assert.IsTrue(result.Data[0].Contains("Lorem"));
     }
 
     [Test]
