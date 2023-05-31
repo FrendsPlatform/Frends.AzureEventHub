@@ -86,7 +86,7 @@ class Receive
     }
 
     [Test]
-    public async Task ReceiveEvents_CheckpointCS_MissingCS()
+    public void ReceiveEvents_CheckpointCS_MissingCS()
     {
         var consumer = _consumer;
         consumer.ConnectionString = "";
@@ -95,7 +95,7 @@ class Receive
         options.MaximumWaitTimeInMinutes = 0.5;
         options.Delay = 1;
 
-        Assert.ThrowsAsync<NullReferenceException>(async () => await AzureEventHub.Receive(consumer, checkpoint, options, default));
+        Assert.Throws<NullReferenceException>(async () => await AzureEventHub.Receive(consumer, checkpoint, options, default));
     }
 
     [Test]
@@ -165,11 +165,10 @@ class Receive
         options.MaxEvents = 2;
         options.ExceptionHandler = ExceptionHandlers.Info;
 
-        // It seems to work as intended, but since there are no rights to consume any data, an exception is being asserted.
         var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
         Assert.IsFalse(result.Success);
-        Assert.AreEqual(2, result.Data.Count);
-        Assert.IsTrue(result.Data[1].Contains("An exception occured"));
+        Assert.AreEqual(1, result.Data.Count);
+        Assert.IsTrue(result.Data[0].Contains("An exception occured: "));
     }
 
     [Test]
