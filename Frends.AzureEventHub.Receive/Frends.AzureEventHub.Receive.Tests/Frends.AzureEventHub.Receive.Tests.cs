@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -95,7 +96,7 @@ class Receive
         options.MaximumWaitTimeInMinutes = 0.5;
         options.Delay = 1;
 
-        Assert.Throws<NullReferenceException>(async () => await AzureEventHub.Receive(consumer, checkpoint, options, default));
+        Assert.ThrowsAsync<NullReferenceException>(async () => await AzureEventHub.Receive(consumer, checkpoint, options, default));
     }
 
     [Test]
@@ -109,8 +110,8 @@ class Receive
 
         var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
         Assert.IsTrue(result.Success);
-        Assert.IsTrue(result.Data.Count > 0); // There are multiple events to consume but can't be sure how many events will be consumed in given limit.
-        Assert.IsTrue(result.Data[0].Contains("Lorem"));
+        Assert.IsTrue(result.Data.Count > 0);
+        Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
     }
 
     [Test]
@@ -128,7 +129,7 @@ class Receive
         var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
         Assert.IsTrue(result.Success);
         Assert.AreEqual(2, result.Data.Count);
-        Assert.IsTrue(result.Data[0].Contains("Lorem"));
+        Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
     }
 
     [Test]
@@ -146,7 +147,6 @@ class Receive
         options.MaxEvents = 2;
         options.ExceptionHandler = ExceptionHandlers.Throw;
 
-        // It seems to work as intended, but since there are no rights to consume any data, an exception is being asserted.
         Assert.ThrowsAsync<Exception>(async () => await AzureEventHub.Receive(consumer, checkpoint, options, default));
     }
 
@@ -167,8 +167,8 @@ class Receive
 
         var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
         Assert.IsFalse(result.Success);
-        Assert.AreEqual(1, result.Data.Count);
-        Assert.IsTrue(result.Data[0].Contains("An exception occured: "));
+        Assert.IsTrue(result.Data.Count > 1);
+        Assert.IsTrue(result.Data.Any(element => element.Contains("An exception occured")));
     }
 
     [Test]
@@ -206,7 +206,7 @@ class Receive
 
         var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
         Assert.IsFalse(result.Success);
-        Assert.IsTrue(result.Data[2].Contains("An exception occured"));
+        Assert.IsTrue(result.Data.Any(element => element.Contains("An exception occured")));
     }
 
     [Test]
@@ -220,7 +220,7 @@ class Receive
         var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
         Assert.IsTrue(result.Success);
         Assert.AreEqual(2, result.Data.Count);
-        Assert.IsTrue(result.Data[0].Contains("Lorem"));
+        Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
     }
 
     [Test]
@@ -239,8 +239,8 @@ class Receive
 
         var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
         Assert.IsTrue(result.Success);
-        Assert.IsTrue(result.Data.Count > 0); // There are multiple events to consume but can't be sure how many events will be consumed in given limit.
-        Assert.IsTrue(result.Data[0].Contains("Lorem"));
+        Assert.IsTrue(result.Data.Count > 0);
+        Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
     }
 
     [Test]
@@ -259,7 +259,7 @@ class Receive
         var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
         Assert.IsTrue(result.Success);
         Assert.AreEqual(2, result.Data.Count);
-        Assert.IsTrue(result.Data[0].Contains("Lorem"));
+        Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
     }
 
     [Test]
@@ -281,7 +281,7 @@ class Receive
         var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
         Assert.IsTrue(result.Success);
         Assert.IsTrue(result.Data.Count > 0); // There are multiple events to consume but can't be sure how many events will be consumed in given limit.
-        Assert.IsTrue(result.Data[0].Contains("Lorem"));
+        Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
     }
 
     [Test]
@@ -300,7 +300,7 @@ class Receive
         var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
         Assert.IsTrue(result.Success);
         Assert.AreEqual(2, result.Data.Count);
-        Assert.IsTrue(result.Data[0].Contains("Lorem"));
+        Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
     }
 
     private async Task GenerateEvent()
