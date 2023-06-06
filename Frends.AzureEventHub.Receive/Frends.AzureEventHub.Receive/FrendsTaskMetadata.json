@@ -1,0 +1,5 @@
+﻿{
+  "Tasks": [
+    { "TaskMethod": "Frends.AzureEventHub.Receive.AzureEventHub.Receive" }
+  ]
+}

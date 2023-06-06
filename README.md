@@ -1,10 +1,10 @@
 # Frends.AzureEventHub
-
-Frends tasks for Azure Event Hub.
+Frends Tasks for Azure Event Hub operations.
 
 # Tasks
 
 - [Frends.AzureEventHub.Send](Frends.AzureEventHub.Send/README.md)
+- [Frends.AzureEventHub.Receive](Frends.AzureEventHub.Receive/README.md)
 
 # Contributing
 When contributing to this repository, please first discuss the change you wish to make via issue, email, or any other method with the owners of this repository before making a change.
