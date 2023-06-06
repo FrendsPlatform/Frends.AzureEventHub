@@ -24,6 +24,7 @@ public class Checkpoint
     /// <summary>
     /// If true, operation creates a new container under the specified account. 
     /// If the container with the same name already exists, it is not changed.
+    /// Note: Not supported when using SAS Token as a authentication method.
     /// </summary>
     /// <example>false</example>
     [DefaultValue(false)]
@@ -67,6 +68,7 @@ public class Checkpoint
     /// The client (application) ID.
     /// </summary>
     /// <example>Y6b1hf2a-80e2-xyz2-qwer3h-3a7c3a8as4b7f</example>
+    [DisplayFormat(DataFormatString = "Text")]
     [UIHint(nameof(AuthenticationMethod), "", AuthenticationMethod.OAuth2)]
     [PasswordPropertyText]
     public string ClientId { get; set; }
@@ -75,6 +77,7 @@ public class Checkpoint
     /// A client secret.
     /// </summary>
     /// <example>Password</example>
+    [DisplayFormat(DataFormatString = "Text")]
     [UIHint(nameof(AuthenticationMethod), "", AuthenticationMethod.OAuth2)]
     [PasswordPropertyText]
     public string ClientSecret { get; set; }

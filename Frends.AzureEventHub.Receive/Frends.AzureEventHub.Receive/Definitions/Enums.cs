@@ -7,16 +7,19 @@ public enum AuthenticationMethod
 {
     /// <summary>
     /// Connection string.
+    /// See https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string
     /// </summary>
     ConnectionString,
 
     /// <summary>
     /// SAS Token.
+    /// See https://learn.microsoft.com/en-us/azure/cognitive-services/translator/document-translation/how-to-guides/create-sas-tokens?tabs=Containers
     /// </summary>
     SASToken,
 
     /// <summary>
     /// OAuth2.
+    /// See https://learn.microsoft.com/en-us/azure/active-directory/fundamentals/auth-oauth2
     /// </summary>
     OAuth2
 }
