@@ -49,7 +49,7 @@ class Receive
             ClientSecret = _clientSecret,
             Namespace = _namespace,
             TenantId = _tenantID,
-            MaximumWaitTime = 10,
+            MaximumWaitTime = 0.5,
             SASToken = default,
             ConsumerGroup = default,
         };
