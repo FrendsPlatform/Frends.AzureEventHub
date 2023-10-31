@@ -27,78 +27,70 @@ public static class AzureEventHub
     /// <param name="checkpoint">Checkpoint parameters.</param>
     /// <param name="options">Optional parameters.</param>
     /// <param name="cancellationToken">Token received from Frends to cancel this Task.</param>
-    /// <returns>Object { bool Success, List&lt;dynamic&gt; Data }</returns>
+    /// <returns>Object { bool Success, List&lt;dynamic&gt; Data, List&lt;dynamic&gt; Errors }</returns>
     public static async Task<Result> Receive([PropertyTab] Consumer consumer, [PropertyTab] Checkpoint checkpoint, [PropertyTab] Options options, CancellationToken cancellationToken)
     {
-        if (options.MaxEvents.Equals(0) && options.MaximumWaitTimeInMinutes.Equals(0))
-            throw new Exception("Both Options.MaxEvents and Options.MaximumWaitTimeInMinutes cannot be unlimited.");
+        if (options.MaxEvents.Equals(0) && options.MaxRunTime.Equals(0))
+            throw new Exception("Both Options.MaxEvents and Options.MaxRunTime cannot be unlimited.");
+        if (options.MaxRunTime > 0 && consumer.MaximumWaitTime > options.MaxRunTime)
+            throw new Exception("Consumer.MaximumWaitTime cannot exceed Options.MaxRunTime when Options.MaxRunTime is greater than 0.");
 
         var results = new List<dynamic>();
+        var errors = new List<dynamic>();
         var stopProcessing = false;
         EventProcessorClient processorClient = null;
-        var timeOut = options.MaximumWaitTimeInMinutes > 0 ? DateTime.UtcNow.AddMinutes(options.MaximumWaitTimeInMinutes) : DateTime.UtcNow;
-        var cancellationTokenSource = new CancellationTokenSource();
-
+        var timeOut = options.MaxRunTime > 0 ? DateTime.UtcNow.AddSeconds(options.MaxRunTime) : DateTime.UtcNow;
 
         try
         {
             var checkpointStorageClient = CreateBlobContainerClient(checkpoint);
 
-            if (checkpoint.CreateContainer && checkpoint.AuthenticationMethod != AuthenticationMethod.SASToken)
+            if (checkpoint.CreateContainer && checkpoint.AuthenticationMethod is not AuthenticationMethod.SASToken)
                 await checkpointStorageClient.CreateIfNotExistsAsync(PublicAccessType.None, null, null, cancellationToken);
 
             processorClient = CreateEventProcessorClient(consumer, checkpointStorageClient);
 
             processorClient.ProcessEventAsync += async (args) =>
             {
-                if (options.MaximumWaitTimeInMinutes > 0 && timeOut <= DateTime.UtcNow)
-                    stopProcessing = true;
-                else if (options.MaxEvents > 0 && results.Count >= options.MaxEvents)
-                    stopProcessing = true;
-                else if (args.Data != null && !stopProcessing)
+                if (args.Data is not null)
                 {
-                    var result = Encoding.UTF8.GetString(args.Data.Body.ToArray());
-                    results.Add(result);
+                    results.Add(Encoding.UTF8.GetString(args.Data.Body.ToArray()));
                     await args.UpdateCheckpointAsync(cancellationToken);
+
+                    if (options.MaxRunTime > 0 && timeOut <= DateTime.UtcNow || options.MaxEvents > 0 && results.Count >= options.MaxEvents)
+                        stopProcessing = true;
                 }
             };
 
             processorClient.ProcessErrorAsync += async (args) =>
             {
-                var ex = $"Partition {args.PartitionId}, Exception: {args.Exception}";
+                if (options.ExceptionHandler is ExceptionHandlers.Throw)
+                    throw new Exception($"Error occurred in partition {args.PartitionId}: ", args.Exception);
 
-                if (options.ExceptionHandler is ExceptionHandlers.Info)
-                {
-                    results.Add(ex);
-                    await Task.CompletedTask;
-                }
-                else
-                    throw new Exception(ex);
+                errors.Add($"Partition {args.PartitionId}, Exception: {args.Exception}");
+                await Task.CompletedTask;
             };
 
             await processorClient.StartProcessingAsync(cancellationToken);
 
             while (!stopProcessing)
-                await Task.Delay(TimeSpan.FromSeconds(options.Delay), cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(options.ConsumeAttemptDelay), cancellationToken);
         }
         catch (Exception ex)
         {
             if (options.ExceptionHandler is ExceptionHandlers.Throw)
-                throw new Exception($"{ex.Message}");
-            else
-            {
-                results.Add($"An exception occured: {ex}");
-                return new Result(false, results);
-            }
+                throw;
+
+            errors.Add($"An exception occurred: {ex}");
+            return new Result(false, results, errors);
         }
         finally
         {
-            if (processorClient.IsRunning)
+            if (processorClient != null)
                 await processorClient.StopProcessingAsync(cancellationToken);
-
         }
 
-        return new Result(true, results);
+        return new Result(true, results, errors);
     }
 
     private static BlobContainerClient CreateBlobContainerClient(Checkpoint checkpoint)
@@ -118,7 +110,7 @@ public static class AzureEventHub
 
         EventProcessorClientOptions eventProcessorClientOptions = new()
         {
-            MaximumWaitTime = TimeSpan.FromSeconds(consumer.MaximumWaitTime)
+            MaximumWaitTime = consumer.MaximumWaitTime > 0 ? TimeSpan.FromSeconds(consumer.MaximumWaitTime) : null
         };
 
         switch (consumer.AuthenticationMethod)
@@ -129,9 +121,9 @@ public static class AzureEventHub
                 else
                     return new(checkpointStorageClient, consumerGroup, consumer.ConnectionString, eventProcessorClientOptions);
             case AuthenticationMethod.SASToken:
-                return new(checkpointStorageClient, consumerGroup, consumer.FullyQualifiedNamespace, consumer.EventHubName, new AzureSasCredential(consumer.SASToken), eventProcessorClientOptions);
+                return new(checkpointStorageClient, consumerGroup, consumer.Namespace, consumer.EventHubName, new AzureSasCredential(consumer.SASToken), eventProcessorClientOptions);
             case AuthenticationMethod.OAuth2:
-                return new(checkpointStorageClient, consumerGroup, consumer.FullyQualifiedNamespace, consumer.EventHubName, new ClientSecretCredential(consumer.TenantId, consumer.ClientId, consumer.ClientSecret), eventProcessorClientOptions);
+                return new(checkpointStorageClient, consumerGroup, consumer.Namespace, consumer.EventHubName, new ClientSecretCredential(consumer.TenantId, consumer.ClientId, consumer.ClientSecret), eventProcessorClientOptions);
             default:
                 throw new Exception("AuthenticationMethod not supported.");
         }
