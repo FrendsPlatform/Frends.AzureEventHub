@@ -9,28 +9,29 @@ namespace Frends.AzureEventHub.Receive.Definitions;
 public class Consumer
 {
     /// <summary>
-    /// Authentication method.
+    /// Specifies the method used for authentication. 
+    /// Default is AuthenticationMethod.ConnectionString.
     /// </summary>
     /// <example>AuthenticationMethod.ConnectionString</example>
     [DefaultValue(AuthenticationMethod.ConnectionString)]
     public AuthenticationMethod AuthenticationMethod { get; set; }
 
     /// <summary>
-    /// The name of the specific Event Hub.
+    /// Specifies the name of the Event Hub to connect to.
     /// </summary>
     /// <example>ExampleHub</example>
     public string EventHubName { get; set; }
 
     /// <summary>
-    /// The name of the consumer group. 
-    /// Events are read in the context of this group.
-    /// Using default consumer group if left empty.
+    /// Specifies the name of the consumer group for reading events. 
+    /// If left empty, the default consumer group will be used.
     /// </summary>
     /// <example>$Default</example>
     public string ConsumerGroup { get; set; }
 
     /// <summary>
-    /// The connection string.
+    /// Specifies the connection string for the Event Hub. 
+    /// Required when using AuthenticationMethod.ConnectionString.
     /// </summary>
     /// <example>Endpoint=sb://NamespaceName.servicebus.windows.net/;SharedAccessKeyName=KeyName;SharedAccessKey=KeyValue</example>
     [DisplayFormat(DataFormatString = "Text")]
@@ -39,14 +40,14 @@ public class Consumer
     public string ConnectionString { get; set; }
 
     /// <summary>
-    /// The fully qualified Event Hubs namespace to connect to.
-    /// Required when using SAS Token or OAuth2 authentication method.
+    /// Specifies the fully qualified namespace of the Event Hub. 
+    /// Required when using SAS Token or OAuth2 authentication methods.
     /// </summary>
     /// <example>{yournamespace}.servicebus.windows.net</example>
-    public string FullyQualifiedNamespace { get; set; }
+    public string Namespace { get; set; }
 
     /// <summary>
-    /// The shared access signature. 
+    /// Specifies the Shared Access Signature token for authentication. 
     /// Access controls may be specified by the Event Hubs namespace or the requested Event Hub, depending on Azure configuration.
     /// </summary>
     /// <example>sv=2021-04-10&amp;se=2022-04-10T10%3A431Z&amp;sr=c&amp;sp=l&amp;sig=ZJg983RovE%2BZXI</example>
@@ -56,7 +57,7 @@ public class Consumer
     public string SASToken { get; set; }
 
     /// <summary>
-    /// The Azure Active Directory tenant (directory) Id.
+    /// Specifies the Azure Active Directory tenant (directory) ID for OAuth2 authentication.
     /// </summary>
     /// <example>Y6b1hf2a-80e2-xyz2-qwer3h-3a7c3a8as4b7f</example>
     [DisplayFormat(DataFormatString = "Text")]
@@ -65,7 +66,7 @@ public class Consumer
     public string TenantId { get; set; }
 
     /// <summary>
-    /// The client (application) ID.
+    /// Specifies the client (application) ID for OAuth2 authentication.
     /// </summary>
     /// <example>Y6b1hf2a-80e2-xyz2-qwer3h-3a7c3a8as4b7f</example>
     [DisplayFormat(DataFormatString = "Text")]
@@ -74,7 +75,7 @@ public class Consumer
     public string ClientId { get; set; }
 
     /// <summary>
-    /// A client secret that was generated for the App Registration used to authenticate the client.
+    /// Specifies the client secret generated for the App Registration used for OAuth2 authentication.
     /// </summary>
     /// <example>Password</example>
     [DisplayFormat(DataFormatString = "Text")]
@@ -83,8 +84,10 @@ public class Consumer
     public string ClientSecret { get; set; }
 
     /// <summary>
-    /// The maximum amount of time to wait for an event to become available for a given partition before emitting an empty event.
+    /// Specifies the maximum wait time (in seconds) for an event to become available before emitting an empty event.
+    /// If set to 0, the processor will wait indefinitely for an event to become available.
+    /// Note: `Consumer.MaximumWaitTime` cannot exceed `Options.MaxRunTime` when `Options.MaxRunTime` is greater than 0.
     /// </summary>
-    /// <example>10 , 10.1</example>
+    /// <example>0, 10 , 10.1</example>
     public double MaximumWaitTime { get; set; }
 }

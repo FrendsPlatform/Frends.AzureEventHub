@@ -8,20 +8,27 @@ namespace Frends.AzureEventHub.Receive.Definitions;
 public class Result
 {
     /// <summary>
-    /// Task complete without errors.
+    /// Indicates whether the Task completed without errors.
     /// </summary>
     /// <example>true</example>
     public bool Success { get; private set; }
 
     /// <summary>
-    /// List of events. 
+    /// Contains a list of events. 
     /// </summary>
-    /// <example>{"foo"}, {"An exception occured"}</example>
+    /// <example>{ "foo", bar }</example>
     public List<dynamic> Data { get; private set; }
 
-    internal Result(bool success, List<dynamic> data)
+    /// <summary>
+    /// Contains a list of errors If Options.ExceptionHandlers is set to Throw.
+    /// </summary>
+    /// <example>{ "An exception occured", "Another exception occured" }</example>
+    public List<dynamic> Errors { get; private set; }
+
+    internal Result(bool success, List<dynamic> data, List<dynamic> errors)
     {
         Success = success;
         Data = data;
+        Errors = errors;
     }
 }

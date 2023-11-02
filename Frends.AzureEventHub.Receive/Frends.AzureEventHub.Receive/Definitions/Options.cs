@@ -8,30 +8,33 @@ namespace Frends.AzureEventHub.Receive.Definitions;
 public class Options
 {
     /// <summary>
-    /// How exception will be handled.
+    /// Determines how exceptions are handled during Task execution. 
+    /// Setting this to ExceptionHandlers.Info will log the exception message to Result.Errors and attempt to continue the Task execution, if possible.
     /// </summary>
     /// <example>ExceptionHandlers.Info</example>
     [DefaultValue(ExceptionHandlers.Info)]
     public ExceptionHandlers ExceptionHandler { get; set; }
 
     /// <summary>
-    /// Delay in seconds between each consume attempt.
+    /// Specifies the delay (in seconds) between each attempt to consume data.
     /// </summary>
     /// <example>1, 0.5</example>
     [DefaultValue(1)]
-    public double Delay { get; set; }
+    public double ConsumeAttemptDelay { get; set; }
 
     /// <summary>
-    /// The maximum amount of time in minutes to wait for an event to become available for a given partition before emitting an empty event.
-    /// If 0, the processor will wait indefinitely for an event to become available or until Options.MaxEvents is reached.
+    /// Sets the maximum duration (in seconds) for the Task to run. 
+    /// If set to 0, the Task can run indefinitely. 
+    /// Note that both MaxRunTime and MaxEvents cannot be set to unlimited.
     /// </summary>
-    /// <example>10, 1.5</example>
-    public double MaximumWaitTimeInMinutes { get; set; }
+    /// <example>0, 10, 1.5</example>
+    public double MaxRunTime { get; set; }
 
     /// <summary>
-    /// Count of events to receive before ending this Task.
-    /// Unlimited if set to 0.
+    /// Defines the maximum number of events to be received before ending the Task. 
+    /// If set to 0, the Task can receive an unlimited number of events. 
+    /// Note that both MaxRunTime and MaxEvents cannot be set to unlimited.
     /// </summary>
-    /// <example>5</example>
+    /// <example>0, 5</example>
     public int MaxEvents { get; set; }
 }

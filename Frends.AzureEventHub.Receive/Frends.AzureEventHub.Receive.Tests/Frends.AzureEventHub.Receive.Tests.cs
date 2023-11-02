@@ -8,13 +8,13 @@ using Frends.AzureEventHub.Receive.Definitions;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+
 namespace Frends.AzureEventHub.Receive.Tests;
 
 [TestFixture]
@@ -32,7 +32,7 @@ class Receive
     private readonly string _tenantID = Environment.GetEnvironmentVariable("HiQ_AzureBlobStorage_TenantID");
     private readonly string _clientSecret = Environment.GetEnvironmentVariable("HiQ_AzureBlobStorage_ClientSecret");
     private readonly string _accessKey = Environment.GetEnvironmentVariable("HiQ_AzureBlobStorage_testsorage01AccessKey");
-    private readonly string _fullyQualifiedNamespace = Environment.GetEnvironmentVariable("HIQ_AzureEventHub_FullyQualifiedNamespace");
+    private readonly string _namespace = Environment.GetEnvironmentVariable("HIQ_AzureEventHub_FullyQualifiedNamespace");
     private readonly string _eventhubKey = Environment.GetEnvironmentVariable("HIQ_AzureEventHub_Key");
 
     [SetUp]
@@ -45,13 +45,13 @@ class Receive
             AuthenticationMethod = AuthenticationMethod.ConnectionString,
             ConnectionString = _eventHubConnectionString,
             EventHubName = "the-hub",
-            ClientId = default,
+            ClientId = _appID,
+            ClientSecret = _clientSecret,
+            Namespace = _namespace,
+            TenantId = _tenantID,
+            MaximumWaitTime = 0.5,
             SASToken = default,
-            ClientSecret = default,
             ConsumerGroup = default,
-            FullyQualifiedNamespace = default,
-            TenantId = default,
-            MaximumWaitTime = 10
         };
 
         _checkpoint = new Checkpoint()
@@ -59,11 +59,11 @@ class Receive
             AuthenticationMethod = AuthenticationMethod.ConnectionString,
             ConnectionString = _blobStorageConnectionString,
             ContainerName = _containerName,
+            ClientId = _appID,
+            ClientSecret = _clientSecret,
+            TenantId = _tenantID,
             CreateContainer = true,
-            ClientId = default,
             SASToken = default,
-            ClientSecret = default,
-            TenantId = default,
             BlobContainerUri = default,
         };
 
@@ -71,8 +71,8 @@ class Receive
         {
             ExceptionHandler = ExceptionHandlers.Info,
             MaxEvents = 0,
-            MaximumWaitTimeInMinutes = 0,
-            Delay = 1,
+            MaxRunTime = 0.5,
+            ConsumeAttemptDelay = 1,
         };
 
         await GenerateEvent();
@@ -87,219 +87,96 @@ class Receive
     }
 
     [Test]
-    public void ReceiveEvents_CheckpointCS_MissingCS()
+    public void ReceiveEvents_MaximumWaitTime_IsGreaterThan_MaxRunTime_Throw()
     {
-        var consumer = _consumer;
-        consumer.ConnectionString = "";
-        var checkpoint = _checkpoint;
-        var options = _options;
-        options.MaximumWaitTimeInMinutes = 0.5;
-        options.Delay = 1;
-
-        Assert.ThrowsAsync<NullReferenceException>(async () => await AzureEventHub.Receive(consumer, checkpoint, options, default));
+        _options.MaxRunTime = 1;
+        _consumer.MaximumWaitTime = 2;
+        var result = Assert.ThrowsAsync<Exception>(async () => await AzureEventHub.Receive(_consumer, _checkpoint, _options, default));
+        Assert.AreEqual("Consumer.MaximumWaitTime cannot exceed Options.MaxRunTime when Options.MaxRunTime is greater than 0.", result.Message);
     }
 
     [Test]
-    public async Task ReceiveEvents_CheckpointCS_MaxWaitTime()
+    public void ReceiveEvents_NoLimit_Throw()
     {
-        var consumer = _consumer;
-        var checkpoint = _checkpoint;
-        var options = _options;
-        options.MaximumWaitTimeInMinutes = 0.5;
-        options.Delay = 1;
-
-        var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
-        Assert.IsTrue(result.Success);
-        Assert.IsTrue(result.Data.Count > 0);
-        Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
+        _options.MaxRunTime = 0;
+        _options.MaxEvents = 0;
+        _options.ExceptionHandler = ExceptionHandlers.Throw;
+        var result = Assert.ThrowsAsync<Exception>(async () => await AzureEventHub.Receive(_consumer, _checkpoint, _options, default));
+        Assert.AreEqual("Both Options.MaxEvents and Options.MaxRunTime cannot be unlimited.", result.Message);
     }
 
     [Test]
-    public async Task ReceiveEvents_ConsumerSAS_MaxEvent()
+    public void ReceiveEvents_MissingConnectionString_Throw()
     {
-        var consumer = _consumer;
-        consumer.AuthenticationMethod = AuthenticationMethod.SASToken;
-        consumer.SASToken = GenerateSASToken_Hub();
-        consumer.FullyQualifiedNamespace = _fullyQualifiedNamespace;
-
-        var checkpoint = _checkpoint;
-        var options = _options;
-        options.MaxEvents = 2;
-
-        var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
-        Assert.IsTrue(result.Success);
-        Assert.AreEqual(2, result.Data.Count);
-        Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
+        _consumer.ConnectionString = "";
+        _options.ExceptionHandler = ExceptionHandlers.Throw;
+        var result = Assert.ThrowsAsync<ArgumentException>(async () => await AzureEventHub.Receive(_consumer, _checkpoint, _options, default));
+        Assert.AreEqual("Value cannot be an empty string. (Parameter 'connectionString')", result.Message);
     }
 
     [Test]
-    public void ReceiveEvents_ConsumerOA_MaxEvent_Throw()
+    public async Task ReceiveEvents_MissingConnectionString_Info()
     {
-        var consumer = _consumer;
-        consumer.AuthenticationMethod = AuthenticationMethod.OAuth2;
-        consumer.TenantId = _tenantID;
-        consumer.ClientId = _appID;
-        consumer.ClientSecret = _clientSecret;
-        consumer.FullyQualifiedNamespace = _fullyQualifiedNamespace;
-
-        var checkpoint = _checkpoint;
-        var options = _options;
-        options.MaxEvents = 2;
-        options.ExceptionHandler = ExceptionHandlers.Throw;
-
-        Assert.ThrowsAsync<Exception>(async () => await AzureEventHub.Receive(consumer, checkpoint, options, default));
-    }
-
-    [Test]
-    public async Task ReceiveEvents_ConsumerOA_MaxEvent_Info()
-    {
-        var consumer = _consumer;
-        consumer.AuthenticationMethod = AuthenticationMethod.OAuth2;
-        consumer.TenantId = _tenantID;
-        consumer.ClientId = _appID;
-        consumer.ClientSecret = _clientSecret;
-        consumer.FullyQualifiedNamespace = _fullyQualifiedNamespace;
-
-        var checkpoint = _checkpoint;
-        var options = _options;
-        options.MaxEvents = 2;
-        options.ExceptionHandler = ExceptionHandlers.Info;
-
-        var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
+        _consumer.ConnectionString = "";
+        var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
         Assert.IsFalse(result.Success);
-        Assert.IsTrue(result.Data.Count >= 1, result.Data.Count.ToString());
-        Assert.IsTrue(result.Data.Any(element => element.Contains("An exception occured")));
+        Assert.AreEqual(0, result.Data.Count);
+        Assert.AreEqual(1, result.Errors.Count);
+        Assert.IsTrue(result.Errors[0].Contains("An exception occurred: System.ArgumentException: Value cannot be an empty string"));
     }
 
     [Test]
-    public void ReceiveEvents_ConsumerOA_CreateContainerFalse_Throw()
+    public void ReceiveEvents_CreateContainerFalse_Throw()
     {
-        var consumer = _consumer;
-        consumer.AuthenticationMethod = AuthenticationMethod.SASToken;
-        consumer.SASToken = GenerateSASToken_Hub();
-        consumer.FullyQualifiedNamespace = _fullyQualifiedNamespace;
-
-        var checkpoint = _checkpoint;
-        checkpoint.CreateContainer = false;
-
-        var options = _options;
-        options.MaxEvents = 2;
-        options.ExceptionHandler = ExceptionHandlers.Throw;
-
-        Assert.ThrowsAsync<Exception>(async () => await AzureEventHub.Receive(consumer, checkpoint, options, default));
+        _checkpoint.CreateContainer = false;
+        _options.ExceptionHandler = ExceptionHandlers.Throw;
+        var result = Assert.ThrowsAsync<AggregateException>(async () => await AzureEventHub.Receive(_consumer, _checkpoint, _options, default));
+        Assert.IsTrue(result.Message.ToString().Contains("The specified container does not exist"));
     }
 
     [Test]
     public async Task ReceiveEvents_CreateContainerFalse_Info()
     {
-        var consumer = _consumer;
-        consumer.AuthenticationMethod = AuthenticationMethod.SASToken;
-        consumer.SASToken = GenerateSASToken_Hub();
-        consumer.FullyQualifiedNamespace = _fullyQualifiedNamespace;
-
-        var checkpoint = _checkpoint;
-        checkpoint.CreateContainer = false;
-
-        var options = _options;
-        options.MaxEvents = 2;
-        options.ExceptionHandler = ExceptionHandlers.Info;
-
-        var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
+        _checkpoint.CreateContainer = false;
+        var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
         Assert.IsFalse(result.Success);
-        Assert.IsTrue(result.Data.Any(element => element.Contains("An exception occured")));
+        Assert.AreEqual(0, result.Data.Count);
+        Assert.IsTrue(result.Errors.Count > 0);
+        Assert.IsTrue(result.Errors.Any(element => element.Contains("The specified container does not exist")));
     }
 
     [Test]
-    public async Task ReceiveEvents_CheckpointCS_MaxEvents()
+    public async Task ReceiveEvents_ConnectionString_Success()
     {
-        var consumer = _consumer;
-        var checkpoint = _checkpoint;
-        var options = _options;
-        options.MaxEvents = 2;
-
-        var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
-        Assert.IsTrue(result.Success);
-        Assert.AreEqual(2, result.Data.Count);
-        Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
-    }
-
-    [Test]
-    public async Task ReceiveEvents_CheckpoinSAS_MaxWaitTime()
-    {
-        var consumer = _consumer;
-
-        var checkpoint = _checkpoint;
-        checkpoint.AuthenticationMethod = AuthenticationMethod.SASToken;
-        checkpoint.SASToken = GenerateSASToken_Blob();
-        checkpoint.BlobContainerUri = CreateContainer();
-
-        var options = _options;
-        options.MaximumWaitTimeInMinutes = 0.5;
-        options.Delay = 1;
-
-        var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
+        var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
         Assert.IsTrue(result.Success);
         Assert.IsTrue(result.Data.Count > 0);
+        Assert.AreEqual(0, result.Errors.Count);
         Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
     }
 
     [Test]
-    public async Task ReceiveEvents_CheckpoinSAS_MaxEvents()
+    public async Task ReceiveEvents_SASToken_Success()
     {
-        var consumer = _consumer;
-
-        var checkpoint = _checkpoint;
-        checkpoint.AuthenticationMethod = AuthenticationMethod.SASToken;
-        checkpoint.SASToken = GenerateSASToken_Blob();
-        checkpoint.BlobContainerUri = CreateContainer();
-
-        var options = _options;
-        options.MaxEvents = 2;
-
-        var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
+        _consumer.AuthenticationMethod = AuthenticationMethod.SASToken;
+        _consumer.SASToken = GenerateSASToken_Hub();
+        var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
         Assert.IsTrue(result.Success);
-        Assert.AreEqual(2, result.Data.Count);
+        Assert.IsTrue(result.Data.Count > 0);
+        Assert.AreEqual(0, result.Errors.Count);
         Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
     }
 
     [Test]
-    public async Task ReceiveEvents_CheckpoinOA_MaxWaitTime()
+    public async Task ReceiveEvents_OAuth2_Success()
     {
-        var consumer = _consumer;
-
-        var checkpoint = _checkpoint;
-        checkpoint.AuthenticationMethod = AuthenticationMethod.OAuth2;
-        checkpoint.BlobContainerUri = CreateContainer();
-        checkpoint.TenantId = _tenantID;
-        checkpoint.ClientId = _appID;
-        checkpoint.ClientSecret = _clientSecret;
-
-        var options = _options;
-        options.MaximumWaitTimeInMinutes = 0.5;
-        options.Delay = 1;
-
-        var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
+        _checkpoint.AuthenticationMethod = AuthenticationMethod.OAuth2;
+        _checkpoint.BlobContainerUri = CreateContainer();
+        _options.ConsumeAttemptDelay = 1;
+        var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
         Assert.IsTrue(result.Success);
-        Assert.IsTrue(result.Data.Count > 0); // There are multiple events to consume but can't be sure how many events will be consumed in given limit.
-        Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
-    }
-
-    [Test]
-    public async Task ReceiveEvents_CheckpoinOA_MaxEvents()
-    {
-        var consumer = _consumer;
-        var checkpoint = _checkpoint;
-        checkpoint.AuthenticationMethod = AuthenticationMethod.OAuth2;
-        checkpoint.BlobContainerUri = CreateContainer();
-        checkpoint.TenantId = _tenantID;
-        checkpoint.ClientId = _appID;
-        checkpoint.ClientSecret = _clientSecret;
-        var options = _options;
-        options.MaxEvents = 2;
-
-        var result = await AzureEventHub.Receive(consumer, checkpoint, options, default);
-        Assert.IsTrue(result.Success);
-        Assert.AreEqual(2, result.Data.Count);
+        Assert.AreEqual(0, result.Errors.Count);
+        Assert.IsTrue(result.Data.Count > 0);
         Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
     }
 
@@ -351,9 +228,9 @@ class Receive
 
             return blobContainerClient.Uri.ToString();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            throw new Exception(ex.Message);
+            throw;
         }
     }
 
@@ -374,9 +251,9 @@ class Receive
 
             return sasBuilder.ToSasQueryParameters(new StorageSharedKeyCredential(_storageAccount, _accessKey)).ToString();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            throw new Exception(ex.Message);
+            throw;
         }
     }
 

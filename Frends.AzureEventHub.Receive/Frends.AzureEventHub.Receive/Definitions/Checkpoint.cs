@@ -9,7 +9,8 @@ namespace Frends.AzureEventHub.Receive.Definitions;
 public class Checkpoint
 {
     /// <summary>
-    /// Authentication method.
+    /// Specifies the method used for authentication. 
+    /// Default is AuthenticationMethod.ConnectionString.
     /// </summary>
     /// <example>AuthenticationMethod.ConnectionString</example>
     [DefaultValue(AuthenticationMethod.ConnectionString)]
@@ -22,16 +23,15 @@ public class Checkpoint
     public string ContainerName { get; set; }
 
     /// <summary>
-    /// If true, operation creates a new container under the specified account. 
-    /// If the container with the same name already exists, it is not changed.
-    /// Note: Not supported when using SAS Token as a authentication method.
+    /// If true, a new container is created under the specified account if it doesn’t exist. 
+    /// Not supported when using SAS Token as an authentication method.
     /// </summary>
     /// <example>false</example>
     [DefaultValue(false)]
     public bool CreateContainer { get; set; }
 
     /// <summary>
-    /// A connection string.
+    /// A connection string for the blob container.
     /// </summary>
     /// <example>DefaultEndpointsProtocol=https;AccountName=accountname;AccountKey=Pdlrxyz==;EndpointSuffix=core.windows.net</example>
     [DisplayFormat(DataFormatString = "Text")]
@@ -40,14 +40,14 @@ public class Checkpoint
     public string ConnectionString { get; set; }
 
     /// <summary>
-    /// Referencing the blob container that includes the name of the account and the name of the container.
+    /// The URI of the blob container. 
     /// Required when using SAS Token or OAuth2 authentication method.
     /// </summary>
     /// <example>https://{account_name}.blob.core.windows.net/{container_name}</example>
     public string BlobContainerUri { get; set; }
 
     /// <summary>
-    /// Shared access signature.
+    /// Shared access signature token.
     /// </summary>
     /// <example>sv=2021-04-10&amp;se=2022-04-10T10%3A431Z&amp;sr=c&amp;sp=l&amp;sig=ZJg9aovE%2BZXI</example>
     [DisplayFormat(DataFormatString = "Text")]
@@ -56,7 +56,8 @@ public class Checkpoint
     public string SASToken { get; set; }
 
     /// <summary>
-    /// The Azure Active Directory tenant (directory) Id.
+    /// The Azure Active Directory tenant (directory) Id. 
+    /// Required for OAuth2 authentication method.
     /// </summary>
     /// <example>Y6b1hf2a-80e2-xyz2-qwer3h-3a7c3a8as4b7f</example>
     [DisplayFormat(DataFormatString = "Text")]
@@ -65,7 +66,8 @@ public class Checkpoint
     public string TenantId { get; set; }
 
     /// <summary>
-    /// The client (application) ID.
+    /// The client (application) ID. 
+    /// Required for OAuth2 authentication method.
     /// </summary>
     /// <example>Y6b1hf2a-80e2-xyz2-qwer3h-3a7c3a8as4b7f</example>
     [DisplayFormat(DataFormatString = "Text")]
@@ -75,6 +77,7 @@ public class Checkpoint
 
     /// <summary>
     /// A client secret.
+    /// Required for OAuth2 authentication method.
     /// </summary>
     /// <example>Password</example>
     [DisplayFormat(DataFormatString = "Text")]
