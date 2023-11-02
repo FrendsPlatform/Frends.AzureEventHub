@@ -151,7 +151,7 @@ class Receive
         var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
         Assert.IsTrue(result.Success);
         Assert.IsTrue(result.Data.Count > 0);
-        Assert.IsTrue(result.Errors.Count == 0);
+        Assert.AreEqual(0, result.Errors.Count);
         Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
     }
 
@@ -163,7 +163,7 @@ class Receive
         var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
         Assert.IsTrue(result.Success);
         Assert.IsTrue(result.Data.Count > 0);
-        Assert.IsTrue(result.Errors.Count == 0);
+        Assert.AreEqual(0, result.Errors.Count);
         Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
     }
 
@@ -175,7 +175,7 @@ class Receive
         _options.ConsumeAttemptDelay = 1;
         var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
         Assert.IsTrue(result.Success);
-        Assert.IsTrue(result.Errors.Count == 0);
+        Assert.AreEqual(0, result.Errors.Count);
         Assert.IsTrue(result.Data.Count > 0);
         Assert.IsTrue(result.Data.Any(element => element.Contains("Lorem")));
     }
