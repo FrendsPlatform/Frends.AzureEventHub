@@ -89,5 +89,6 @@ public class Consumer
     /// Note: `Consumer.MaximumWaitTime` cannot exceed `Options.MaxRunTime` when `Options.MaxRunTime` is greater than 0.
     /// </summary>
     /// <example>0, 10 , 10.1</example>
+    [DefaultValue((double)0)]
     public double MaximumWaitTime { get; set; }
 }

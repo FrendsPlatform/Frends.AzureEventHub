@@ -1,4 +1,9 @@
 # Changelog
+
+## [2.0.1] - 2023-11-29
+### Fixed
+- Fixed ExceptionHandler check in catch and documentational fixes.
+
 ## [2.0.0] - 2023-10-31
 ### Added
 - New property `Result.Errors`.

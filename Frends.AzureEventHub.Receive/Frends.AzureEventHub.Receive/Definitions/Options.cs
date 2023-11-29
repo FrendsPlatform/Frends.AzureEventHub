@@ -28,6 +28,7 @@ public class Options
     /// Note that both MaxRunTime and MaxEvents cannot be set to unlimited.
     /// </summary>
     /// <example>0, 10, 1.5</example>
+    [DefaultValue((double)0)]
     public double MaxRunTime { get; set; }
 
     /// <summary>
@@ -36,5 +37,6 @@ public class Options
     /// Note that both MaxRunTime and MaxEvents cannot be set to unlimited.
     /// </summary>
     /// <example>0, 5</example>
+    [DefaultValue(0)]
     public int MaxEvents { get; set; }
 }
