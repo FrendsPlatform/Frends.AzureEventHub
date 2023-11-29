@@ -78,7 +78,7 @@ public static class AzureEventHub
         }
         catch (Exception ex)
         {
-            if (options.ExceptionHandler is ExceptionHandlers.Throw)
+            if (options.ExceptionHandler == ExceptionHandlers.Throw)
                 throw;
 
             errors.Add($"An exception occurred: {ex}");
