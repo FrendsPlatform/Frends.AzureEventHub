@@ -49,7 +49,7 @@ class Receive
             ClientSecret = _clientSecret,
             Namespace = _namespace,
             TenantId = _tenantID,
-            MaximumWaitTime = 0.5,
+            MaximumWaitTime = 10,
             SASToken = default,
             ConsumerGroup = default,
         };
@@ -71,7 +71,7 @@ class Receive
         {
             ExceptionHandler = ExceptionHandlers.Info,
             MaxEvents = 0,
-            MaxRunTime = 0.5,
+            MaxRunTime = 10,
             ConsumeAttemptDelay = 1,
         };
 
