@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.2] - 2024-05-31
+### Changed
+- Replaced the List<> with a ConcurrentBag<> for the received messages.
+
 ## [2.0.1] - 2023-11-29
 ### Fixed
 - Fixed ExceptionHandler check in catch and documentational fixes.
