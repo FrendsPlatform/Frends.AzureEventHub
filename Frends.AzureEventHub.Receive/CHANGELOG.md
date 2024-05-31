@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.3.0] - 2024-10-30
+### Fixed
+- Fixed Receive hanging in execution by adding a check for the MaximumWaitTime.
+
 ## [2.2.0] - 2024-08-22
 ### Added
 - Updated Azure.Identity to the latest version 1.12.0.
