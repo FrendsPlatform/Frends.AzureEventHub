@@ -6,6 +6,7 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Frends.AzureEventHub.Receive.Definitions;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
@@ -35,8 +36,8 @@ public static class AzureEventHub
         if (options.MaxRunTime > 0 && consumer.MaximumWaitTime > options.MaxRunTime)
             throw new Exception("Consumer.MaximumWaitTime cannot exceed Options.MaxRunTime when Options.MaxRunTime is greater than 0.");
 
-        var results = new List<dynamic>();
-        var errors = new List<dynamic>();
+        var results = new ConcurrentBag<dynamic>();
+        var errors = new ConcurrentBag<dynamic>();
         var stopProcessing = false;
         EventProcessorClient processorClient = null;
         var timeOut = options.MaxRunTime > 0 ? DateTime.UtcNow.AddSeconds(options.MaxRunTime) : DateTime.UtcNow;

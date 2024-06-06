@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Frends.AzureEventHub.Receive.Definitions;
 
@@ -25,10 +27,10 @@ public class Result
     /// <example>{ "An exception occured", "Another exception occured" }</example>
     public List<dynamic> Errors { get; private set; }
 
-    internal Result(bool success, List<dynamic> data, List<dynamic> errors)
+    internal Result(bool success, ConcurrentBag<dynamic> data, ConcurrentBag<dynamic> errors)
     {
         Success = success;
-        Data = data;
-        Errors = errors;
+        Data = data.ToList();
+        Errors = errors.ToList();
     }
 }
