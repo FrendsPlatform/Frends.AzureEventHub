@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.2] - 2024-05-31
+## [2.1.0] - 2024-05-31
 ### Changed
 - Replaced the List<> with a ConcurrentBag<> for the received messages.
 

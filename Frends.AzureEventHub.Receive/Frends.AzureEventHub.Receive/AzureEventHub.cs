@@ -37,7 +37,7 @@ public static class AzureEventHub
             throw new Exception("Consumer.MaximumWaitTime cannot exceed Options.MaxRunTime when Options.MaxRunTime is greater than 0.");
 
         var results = new ConcurrentBag<dynamic>();
-        var errors = new List<dynamic>();
+        var errors = new ConcurrentBag<dynamic>();
         var stopProcessing = false;
         EventProcessorClient processorClient = null;
         var timeOut = options.MaxRunTime > 0 ? DateTime.UtcNow.AddSeconds(options.MaxRunTime) : DateTime.UtcNow;
