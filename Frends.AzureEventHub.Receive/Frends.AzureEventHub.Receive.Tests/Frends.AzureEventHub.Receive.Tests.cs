@@ -26,7 +26,7 @@ class Receive
     private readonly string _storageAccount = "testsorage01";
     private static string _containerName;
     private readonly string _testFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TestFiles", "TestFile.xml");
-    private readonly string _eventHubConnectionString = Environment.GetEnvironmentVariable("EVENT_HUB_CONNECTION_STRING");
+    private readonly string _eventHubConnectionString = //Environment.GetEnvironmentVariable("EVENT_HUB_CONNECTION_STRING");
     private readonly string _blobStorageConnectionString = Environment.GetEnvironmentVariable("HiQ_AzureBlobStorage_ConnString");
     private readonly string _appID = Environment.GetEnvironmentVariable("HiQ_AzureBlobStorage_AppID");
     private readonly string _tenantID = Environment.GetEnvironmentVariable("HiQ_AzureBlobStorage_TenantID");
@@ -174,6 +174,7 @@ class Receive
         _checkpoint.BlobContainerUri = CreateContainer();
         _options.ConsumeAttemptDelay = 1;
         var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
+        await Task.Delay(10000);
         Assert.IsTrue(result.Success);
         Assert.AreEqual(0, result.Errors.Count);
         Assert.IsTrue(result.Data.Count > 0);
