@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.2.0] - 2024-08-22
+### Added
+- Updated Azure.Identity to the latest version 1.12.0.
+
 ## [2.1.0] - 2024-05-31
 ### Changed
 - Replaced the List<> with a ConcurrentBag<> for the received messages.

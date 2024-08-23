@@ -174,6 +174,7 @@ class Receive
         _checkpoint.BlobContainerUri = CreateContainer();
         _options.ConsumeAttemptDelay = 1;
         var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
+        await Task.Delay(10000);
         Assert.IsTrue(result.Success);
         Assert.AreEqual(0, result.Errors.Count);
         Assert.IsTrue(result.Data.Count > 0);
