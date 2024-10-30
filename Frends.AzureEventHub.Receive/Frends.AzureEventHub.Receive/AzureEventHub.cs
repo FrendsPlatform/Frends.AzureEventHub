@@ -41,6 +41,8 @@ public static class AzureEventHub
         var stopProcessing = false;
         EventProcessorClient processorClient = null;
         var timeOut = options.MaxRunTime > 0 ? DateTime.UtcNow.AddSeconds(options.MaxRunTime) : DateTime.UtcNow;
+        var maximumWaitTime = consumer.MaximumWaitTime > 0 ? TimeSpan.FromSeconds(consumer.MaximumWaitTime) : (TimeSpan?)null;
+        var lastEventTime = DateTime.UtcNow;
 
         try
         {
@@ -75,7 +77,14 @@ public static class AzureEventHub
             await processorClient.StartProcessingAsync(cancellationToken);
 
             while (!stopProcessing)
+            {
+                if (maximumWaitTime.HasValue && DateTime.UtcNow - lastEventTime >= maximumWaitTime.Value)
+                {
+                    stopProcessing = true;
+                    break;
+                }
                 await Task.Delay(TimeSpan.FromSeconds(options.ConsumeAttemptDelay), cancellationToken);
+            }
         }
         catch (Exception ex)
         {
