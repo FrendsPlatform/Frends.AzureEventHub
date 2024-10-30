@@ -2,7 +2,7 @@
 
 ## [2.3.0] - 2024-10-30
 ### Fixed
-- Fixed Receive hanging in execution by adding a check for the MaximumWaitTime.
+- Issue #11 - Fixed Receive hanging in execution by adding a check for the MaximumWaitTime.
 
 ## [2.2.0] - 2024-08-22
 ### Added
