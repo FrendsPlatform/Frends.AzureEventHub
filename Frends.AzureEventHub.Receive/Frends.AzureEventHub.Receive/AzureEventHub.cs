@@ -102,9 +102,9 @@ public static class AzureEventHub
         {
             if (processorClient != null)
             {
+                await processorClient.StopProcessingAsync(cancellationToken);
                 processorClient.ProcessEventAsync -= ProcessEventHandler;
                 processorClient.ProcessErrorAsync -= ProcessErrorHandler;
-                await processorClient.StopProcessingAsync(cancellationToken);
             }
         }
 
