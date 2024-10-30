@@ -7,11 +7,11 @@ using Azure.Storage.Blobs.Models;
 using Frends.AzureEventHub.Receive.Definitions;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Messaging.EventHubs.Processor;
 
 namespace Frends.AzureEventHub.Receive;
 
@@ -44,6 +44,28 @@ public static class AzureEventHub
         var maximumWaitTime = consumer.MaximumWaitTime > 0 ? TimeSpan.FromSeconds(consumer.MaximumWaitTime) : (TimeSpan?)null;
         var lastEventTime = DateTime.UtcNow;
 
+        async Task ProcessEventHandler(ProcessEventArgs args)
+        {
+            if (args.Data is not null)
+            {
+                results.Add(Encoding.UTF8.GetString(args.Data.Body.ToArray()));
+                await args.UpdateCheckpointAsync(cancellationToken);
+                lastEventTime = DateTime.UtcNow;
+
+                if (options.MaxRunTime > 0 && timeOut <= DateTime.UtcNow || options.MaxEvents > 0 && results.Count >= options.MaxEvents)
+                    stopProcessing = true;
+            }
+        }
+
+        async Task ProcessErrorHandler(ProcessErrorEventArgs args)
+        {
+            if (options.ExceptionHandler is ExceptionHandlers.Throw)
+                throw new Exception($"Error occurred in partition {args.PartitionId}: ", args.Exception);
+
+            errors.Add($"Partition {args.PartitionId}, Exception: {args.Exception}");
+            stopProcessing = true;
+        }
+
         try
         {
             var checkpointStorageClient = CreateBlobContainerClient(checkpoint);
@@ -53,26 +75,8 @@ public static class AzureEventHub
 
             processorClient = CreateEventProcessorClient(consumer, checkpointStorageClient);
 
-            processorClient.ProcessEventAsync += async (args) =>
-            {
-                if (args.Data is not null)
-                {
-                    results.Add(Encoding.UTF8.GetString(args.Data.Body.ToArray()));
-                    await args.UpdateCheckpointAsync(cancellationToken);
-
-                    if (options.MaxRunTime > 0 && timeOut <= DateTime.UtcNow || options.MaxEvents > 0 && results.Count >= options.MaxEvents)
-                        stopProcessing = true;
-                }
-            };
-
-            processorClient.ProcessErrorAsync += async (args) =>
-            {
-                if (options.ExceptionHandler is ExceptionHandlers.Throw)
-                    throw new Exception($"Error occurred in partition {args.PartitionId}: ", args.Exception);
-
-                errors.Add($"Partition {args.PartitionId}, Exception: {args.Exception}");
-                await Task.CompletedTask;
-            };
+            processorClient.ProcessEventAsync += ProcessEventHandler;
+            processorClient.ProcessErrorAsync += ProcessErrorHandler;
 
             await processorClient.StartProcessingAsync(cancellationToken);
 
@@ -97,7 +101,11 @@ public static class AzureEventHub
         finally
         {
             if (processorClient != null)
+            {
                 await processorClient.StopProcessingAsync(cancellationToken);
+                processorClient.ProcessEventAsync -= ProcessEventHandler;
+                processorClient.ProcessErrorAsync -= ProcessErrorHandler;
+            }
         }
 
         return new Result(true, results, errors);
