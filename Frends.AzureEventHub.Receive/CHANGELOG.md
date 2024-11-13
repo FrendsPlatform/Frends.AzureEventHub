@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.4.0] - 2024-11-13
+### Changed
+- Upgraded Azure.Messaging.EventHubs to version 5.11.5.
+- Upgraded Azure.Messaging.EventHubs.Processor to version 5.11.5.
+
 ## [2.3.0] - 2024-10-30
 ### Fixed
 - Issue #11 - Fixed Receive hanging in execution by adding a check for the MaximumWaitTime.

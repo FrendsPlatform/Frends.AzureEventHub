@@ -31,7 +31,7 @@ public static class AzureEventHub
             input.ConnectionString,
             eventHubProducerClientOptions);
 
-        // Create a batch of events 
+        // Create a batch of events
         using EventDataBatch eventBatch = await producerClient.CreateBatchAsync();
 
         for (int i = 0; i < input.Messages.Length; i++)
@@ -60,7 +60,7 @@ public static class AzureEventHub
                 true,
                 $"A batch of {input.Messages.Length} events has been published.");
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             return new Result(
                 false,
@@ -74,11 +74,14 @@ public static class AzureEventHub
 
     internal static EventHubProducerClientOptions CreateOptions(Options options)
     {
-        return new EventHubProducerClientOptions {
-            ConnectionOptions = new EventHubConnectionOptions {
+        return new EventHubProducerClientOptions
+        {
+            ConnectionOptions = new EventHubConnectionOptions
+            {
                 TransportType = options.GetNativeClientTransportType()
             },
-            RetryOptions = new EventHubsRetryOptions {
+            RetryOptions = new EventHubsRetryOptions
+            {
                 MaximumRetries = options.MaximumRetries,
                 Delay = TimeSpan.FromMilliseconds(options.DelayInMilliseconds),
                 MaximumDelay = TimeSpan.FromMilliseconds(options.MaximumDelayInMilliseconds),
