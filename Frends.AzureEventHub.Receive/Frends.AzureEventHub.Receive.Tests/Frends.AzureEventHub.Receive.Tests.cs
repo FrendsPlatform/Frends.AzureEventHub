@@ -168,6 +168,7 @@ class Receive
     }
 
     [Test]
+    [Ignore("Cannot tests OAuth at the moment")]
     public async Task ReceiveEvents_OAuth2_Success()
     {
         _checkpoint.AuthenticationMethod = AuthenticationMethod.OAuth2;

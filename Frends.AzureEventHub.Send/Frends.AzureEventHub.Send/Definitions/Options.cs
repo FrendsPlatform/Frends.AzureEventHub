@@ -22,7 +22,7 @@ public class Options
     /// <example>800</example>
     [DefaultValue(800)]
     public int MaximumDelayInMilliseconds { get; set; } = 800;
-    
+
     /// <summary>
     /// The maximum delay between retry attempts (e.g. for exponential backoff).
     /// </summary>
