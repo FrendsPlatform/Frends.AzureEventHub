@@ -41,7 +41,11 @@ class Send
     {
         // create big message
         var sb = new StringBuilder();
-        for(var i = 0; i < 10000; i++) { sb.Append("this is a string that is going to be long"); }
+        for (var i = 0; i < 10000; i++)
+        {
+            sb.Append("this is a string that is going to be long");
+        }
+
         var message = sb.ToString();
         var input = new Input
         {
