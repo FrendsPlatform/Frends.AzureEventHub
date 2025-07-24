@@ -35,9 +35,14 @@ public class UpdateCheckpointsTests
         _blobStorageConnectionString = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_CONNSTRING");
         _containerName = "checkpointcontainer" + Guid.NewGuid().ToString();
         _eventHubNamespace = Environment.GetEnvironmentVariable("HIQ_AZUREEVENTHUB_FULLYQUALIFIEDNAMESPACE");
-        _eventHubName = "the-hub";
+        var eventHubConnectionString = Environment.GetEnvironmentVariable("EVENT_HUB_CONNECTION_STRING");
+        _eventHubName = ExtractEntityPathFromConnectionString(eventHubConnectionString);
         _consumerGroup = "$Default";
-
+        _sasToken = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_TESTSORAGE01ACCESSKEY");
+        _tenantId = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_TENANTID");
+        _clientId = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_APPID");
+        _clientSecret = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_CLIENTSECRET");
+        _storageAccountName = ExtractStorageAccountName(_blobStorageConnectionString);
         _containerClient = new BlobContainerClient(_blobStorageConnectionString, _containerName);
         await _containerClient.CreateIfNotExistsAsync();
 
@@ -257,6 +262,107 @@ public class UpdateCheckpointsTests
 
         Assert.That(result.Success, Is.True);
         await VerifyTimestampAdjustment("0", timestampAdjustment);
+    }
+
+    [Test]
+    public async Task UpdateCheckpoints_SasToken_ReturnsSuccess()
+    {
+        var input = new Input
+        {
+            EventHubName = _eventHubName,
+            ConsumerGroup = _consumerGroup,
+            PartitionIds = ["0", "1"],
+            RollbackEvents = 0,
+        };
+        var connection = new Connection
+        {
+            AuthMethod = AuthMethod.SasToken,
+            SasToken = _sasToken,
+            StorageAccountName = _storageAccountName,
+            ContainerName = _containerName,
+            EventHubNamespace = _eventHubNamespace,
+        };
+        var options = new Options
+        {
+            FailIfPartitionMissing = false,
+            ThrowErrorOnFailure = false,
+        };
+
+        var result = await AzureEventHub.UpdateCheckpoints(input, connection, options, CancellationToken.None);
+
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.UpdatedPartitions, Contains.Item("0"));
+        Assert.That(result.UpdatedPartitions, Contains.Item("1"));
+    }
+
+    [Test]
+    public async Task UpdateCheckpoints_OAuth_ReturnsSuccess()
+    {
+        var input = new Input
+        {
+            EventHubName = _eventHubName,
+            ConsumerGroup = _consumerGroup,
+            PartitionIds = ["0", "1"],
+            RollbackEvents = 0,
+        };
+        var connection = new Connection
+        {
+            AuthMethod = AuthMethod.OAuth,
+            StorageAccountName = _storageAccountName,
+            ContainerName = _containerName,
+            EventHubNamespace = _eventHubNamespace,
+            OAuth = new OAuthConfig
+            {
+                TenantId = _tenantId,
+                ClientId = _clientId,
+                ClientSecret = _clientSecret,
+            },
+        };
+        var options = new Options
+        {
+            FailIfPartitionMissing = false,
+            ThrowErrorOnFailure = false,
+        };
+
+        var result = await AzureEventHub.UpdateCheckpoints(input, connection, options, CancellationToken.None);
+
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.UpdatedPartitions, Contains.Item("0"));
+        Assert.That(result.UpdatedPartitions, Contains.Item("1"));
+    }
+
+    private string ExtractStorageAccountName(string connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return null;
+
+        var parts = connectionString.Split(';');
+        foreach (var part in parts)
+        {
+            if (part.StartsWith("AccountName=", StringComparison.OrdinalIgnoreCase))
+            {
+                return part.Substring("AccountName=".Length);
+            }
+        }
+
+        return null;
+    }
+
+    private string ExtractEntityPathFromConnectionString(string connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return null;
+
+        var parts = connectionString.Split(';');
+        foreach (var part in parts)
+        {
+            if (part.StartsWith("EntityPath=", StringComparison.OrdinalIgnoreCase))
+            {
+                return part.Substring("EntityPath=".Length);
+            }
+        }
+
+        return null;
     }
 
     private async Task CreateTestCheckpoints()
