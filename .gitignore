@@ -248,3 +248,5 @@ Frends.Community.*/Frends.Community.*/Frends.Community.*.xml
 *.ps1
 
 .DS_Store
+/Frends.AzureEventHub.UpdateCheckpoint/Frends.AzureEventHub.UpdateCheckpoint.Tests/env.local
+/Frends.AzureEventHub.UpdateCheckpoint/Frends.AzureEventHub.UpdateCheckpoint.Tests/.env.local

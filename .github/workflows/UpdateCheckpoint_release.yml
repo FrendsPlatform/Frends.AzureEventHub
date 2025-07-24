@@ -1,0 +1,13 @@
+name: UpdateCheckpoint_release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: FrendsPlatform/FrendsTasks/.github/workflows/release.yml@main
+    with:
+      workdir: Frends.AzureEventHub.UpdateCheckpoint
+      dotnet_version: 8.0.x
+    secrets:
+      feed_api_key: ${{ secrets.TASKS_FEED_API_KEY }}
