@@ -1,6 +1,6 @@
 # Frends.AzureEventHub.UpdateCheckpoint
 
-Description of what the Task will do.
+Task to update checkpoints in an Azure Storage container for a specified Event Hub consumer group.
 
 [![UpdateCheckpoint_build](https://github.com/FrendsPlatform/Frends.AzureEventHub/actions/workflows/UpdateCheckpoint_build_and_test_on_main.yml/badge.svg)](https://github.com/FrendsPlatform/Frends.AzureEventHub/actions/workflows/UpdateCheckpoint_build_and_test_on_main.yml)
 ![Coverage](https://app-github-custom-badges.azurewebsites.net/Badge?key=FrendsPlatform/Frends.AzureEventHub/Frends.AzureEventHub.UpdateCheckpoint|main)
