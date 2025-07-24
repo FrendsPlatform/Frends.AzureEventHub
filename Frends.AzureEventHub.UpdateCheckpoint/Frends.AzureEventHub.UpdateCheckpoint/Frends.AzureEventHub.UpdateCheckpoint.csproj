@@ -11,7 +11,7 @@
         <PackageTags>Frends</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <Description>Description of the Task</Description>
+        <Description>Task to update checkpoints in an Azure Storage container for a specified Event Hub consumer group.</Description>
         <PackageProjectUrl>https://frends.com/</PackageProjectUrl>
         <RepositoryUrl>https://github.com/FrendsPlatform/Frends.AzureEventHub/tree/main/Frends.AzureEventHub.UpdateCheckpoint</RepositoryUrl>
     </PropertyGroup>

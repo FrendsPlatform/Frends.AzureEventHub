@@ -35,5 +35,4 @@ public class Options
     /// <example>Task failed during execution</example>
     [DisplayFormat(DataFormatString = "Text")]
     public string ErrorMessageOnFailure { get; set; }
-
 }

@@ -31,7 +31,7 @@ public static class AzureEventHub
     /// <returns>
     /// Result { string[] UpdatedPartitions, string[] SkippedPartitions, bool RollbackApplied, ErrorDetail[] Errors }
     /// </returns>
-    public static async Task<Result> UpdateCheckpoints(
+    public static async Task<Result> UpdateCheckpoint(
         [PropertyTab] Input input,
         [PropertyTab] Connection connection,
         [PropertyTab] Options options,

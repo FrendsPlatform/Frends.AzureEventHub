@@ -83,7 +83,7 @@ public class UpdateCheckpointsTests
             TimestampAdjustment = TimeSpan.FromMinutes(5),
         };
 
-        var result = await AzureEventHub.UpdateCheckpoints(input, connection, options, CancellationToken.None);
+        var result = await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
 
         Assert.That(result.Success, Is.False);
         Assert.That(result.UpdatedPartitions.Length, Is.EqualTo(2));
@@ -126,7 +126,7 @@ public class UpdateCheckpointsTests
             ThrowErrorOnFailure = false,
         };
 
-        var result = await AzureEventHub.UpdateCheckpoints(input, connection, options, CancellationToken.None);
+        var result = await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
 
         Assert.That(result.Success, Is.True);
         Assert.That(result.UpdatedPartitions.Length, Is.EqualTo(2));
@@ -163,7 +163,7 @@ public class UpdateCheckpointsTests
 
         try
         {
-            await AzureEventHub.UpdateCheckpoints(input, connection, options, CancellationToken.None);
+            await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
             Assert.Fail("Expected an exception to be thrown");
         }
         catch (Exception ex)
@@ -193,7 +193,7 @@ public class UpdateCheckpointsTests
         var options = new Options();
 
         Assert.ThrowsAsync<Exception>(() =>
-                    AzureEventHub.UpdateCheckpoints(input, connection, options, CancellationToken.None));
+                    AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
     }
 
     [Test]
@@ -223,7 +223,7 @@ public class UpdateCheckpointsTests
 
         try
         {
-            await AzureEventHub.UpdateCheckpoints(input, connection, options, CancellationToken.None);
+            await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
             Assert.Fail("Expected an exception to be thrown");
         }
         catch (Exception ex)
@@ -258,13 +258,14 @@ public class UpdateCheckpointsTests
             ThrowErrorOnFailure = false,
         };
 
-        var result = await AzureEventHub.UpdateCheckpoints(input, connection, options, CancellationToken.None);
+        var result = await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
 
         Assert.That(result.Success, Is.True);
         await VerifyTimestampAdjustment("0", timestampAdjustment);
     }
 
     [Test]
+    [Ignore("SAS token test - requires valid SAS token in HIQ_AZUREBLOBSTORAGE_TESTSORAGE01ACCESSKEY. Can be run locally with proper credentials.")]
     public async Task UpdateCheckpoints_SasToken_ReturnsSuccess()
     {
         var input = new Input
@@ -288,7 +289,7 @@ public class UpdateCheckpointsTests
             ThrowErrorOnFailure = false,
         };
 
-        var result = await AzureEventHub.UpdateCheckpoints(input, connection, options, CancellationToken.None);
+        var result = await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
 
         Assert.That(result.Success, Is.True);
         Assert.That(result.UpdatedPartitions, Contains.Item("0"));
@@ -296,6 +297,7 @@ public class UpdateCheckpointsTests
     }
 
     [Test]
+    [Ignore("OAuth test - requires valid OAuth credentials in HIQ_AZUREBLOBSTORAGE_TENANTID, HIQ_AZUREBLOBSTORAGE_APPID, and HIQ_AZUREBLOBSTORAGE_CLIENTSECRET. Can be run locally with proper credentials.")]
     public async Task UpdateCheckpoints_OAuth_ReturnsSuccess()
     {
         var input = new Input
@@ -324,7 +326,7 @@ public class UpdateCheckpointsTests
             ThrowErrorOnFailure = false,
         };
 
-        var result = await AzureEventHub.UpdateCheckpoints(input, connection, options, CancellationToken.None);
+        var result = await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
 
         Assert.That(result.Success, Is.True);
         Assert.That(result.UpdatedPartitions, Contains.Item("0"));

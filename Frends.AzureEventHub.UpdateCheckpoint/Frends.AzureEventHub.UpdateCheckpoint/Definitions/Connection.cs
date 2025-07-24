@@ -42,14 +42,18 @@ public class Connection
     /// </summary>
     /// <example>DefaultEndpointsProtocol=https;AccountName=mystorage;AccountKey=KEY;EndpointSuffix=core.windows.net</example>
     [DisplayFormat(DataFormatString = "Text")]
+    [UIHint(nameof(AuthMethod), "", AuthMethod.ConnectionString)]
+    [PasswordPropertyText]
     public string ConnectionString { get; set; }
 
     /// <summary>
     /// SAS token for accessing the blob storage.
     /// Used if AuthMethod is SasToken.
     /// </summary>
-    /// <example>?sv=2020-08-04&ss=b&srt=sco&sp=rw</example>
+    /// <example>?sv=2020-08-04ss=bsrt=scosp=rw</example>
     [DisplayFormat(DataFormatString = "Text")]
+    [UIHint(nameof(AuthMethod), "", AuthMethod.SasToken)]
+    [PasswordPropertyText]
     public string SasToken { get; set; }
 
     /// <summary>
@@ -57,5 +61,6 @@ public class Connection
     /// Used if AuthMethod is OAuth.
     /// </summary>
     /// <example>{ "TenantId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "ClientId": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy" }</example>
+    [UIHint(nameof(AuthMethod), "", AuthMethod.OAuth)]
     public OAuthConfig OAuth { get; set; }
 }

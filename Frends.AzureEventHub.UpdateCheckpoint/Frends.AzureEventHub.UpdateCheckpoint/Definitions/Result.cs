@@ -1,6 +1,4 @@
-﻿using Microsoft.Azure.Amqp.Framing;
-using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Frends.AzureEventHub.UpdateCheckpoint.Definitions;
 
@@ -40,5 +38,4 @@ public class Result
     /// </summary>
     /// <example>[ { "PartitionId": "2", "Error": "Checkpoint not found." } ]</example>
     public Error[] Errors { get; set; }
-
 }
