@@ -333,6 +333,74 @@ public class UpdateCheckpointsTests
         Assert.That(result.UpdatedPartitions, Contains.Item("1"));
     }
 
+    [Test]
+    public async Task UpdateCheckpoints_SasToken_MissingToken_ThrowsException()
+    {
+        var input = new Input
+        {
+            EventHubName = _eventHubName,
+            ConsumerGroup = _consumerGroup,
+            PartitionIds = ["0"],
+            RollbackEvents = 0,
+        };
+        var connection = new Connection
+        {
+            AuthMethod = AuthMethod.SasToken,
+            SasToken = null,
+            StorageAccountName = _storageAccountName,
+            ContainerName = _containerName,
+            EventHubNamespace = _eventHubNamespace,
+        };
+        var options = new Options
+        {
+            ThrowErrorOnFailure = true,
+        };
+
+        try
+        {
+            await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
+            Assert.Fail("Expected an exception to be thrown");
+        }
+        catch (Exception ex)
+        {
+            Assert.That(ex.Message, Contains.Substring("SasToken must be provided when using SasToken auth method"));
+        }
+    }
+
+    [Test]
+    public async Task UpdateCheckpoints_OAuth_MissingConfig_ThrowsException()
+    {
+        var input = new Input
+        {
+            EventHubName = _eventHubName,
+            ConsumerGroup = _consumerGroup,
+            PartitionIds = ["0"],
+            RollbackEvents = 0,
+        };
+        var connection = new Connection
+        {
+            AuthMethod = AuthMethod.OAuth,
+            OAuth = null,
+            StorageAccountName = _storageAccountName,
+            ContainerName = _containerName,
+            EventHubNamespace = _eventHubNamespace,
+        };
+        var options = new Options
+        {
+            ThrowErrorOnFailure = true,
+        };
+
+        try
+        {
+            await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
+            Assert.Fail("Expected an exception to be thrown");
+        }
+        catch (Exception ex)
+        {
+            Assert.That(ex.Message, Contains.Substring("OAuth configuration must be provided when using OAuth auth method"));
+        }
+    }
+
     private string ExtractStorageAccountName(string connectionString)
     {
         if (string.IsNullOrWhiteSpace(connectionString))
