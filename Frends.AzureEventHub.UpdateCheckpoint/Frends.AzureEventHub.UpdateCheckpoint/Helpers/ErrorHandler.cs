@@ -3,67 +3,66 @@ using System.Collections.Generic;
 using System.Linq;
 using Frends.AzureEventHub.UpdateCheckpoint.Definitions;
 
-namespace Frends.AzureEventHub.UpdateCheckpoint.Helpers
+namespace Frends.AzureEventHub.UpdateCheckpoint.Helpers;
+
+/// <summary>
+/// Handles error with usage of a standard ThrowOnFailure Frends flag
+/// </summary>
+public static class ErrorHandler
 {
     /// <summary>
-    /// Handles error with usage of a standard ThrowOnFailure Frends flag
+    /// Handler for exception
     /// </summary>
-    public static class ErrorHandler
+    /// <returns>Throw exception if a flag is true, else return Result with Error info</returns>
+    public static Result Handle(Exception exception, bool throwOnFailure, string errorMessage)
     {
-        /// <summary>
-        /// Handler for exception
-        /// </summary>
-        /// <returns>Throw exception if a flag is true, else return Result with Error info</returns>
-        public static Result Handle(Exception exception, bool throwOnFailure, string errorMessage)
+        if (throwOnFailure)
         {
-            if (throwOnFailure)
-            {
-                throw new Exception($"{errorMessage}\n{exception.Message}", exception);
-            }
+            throw new Exception($"{errorMessage}\n{exception.Message}", exception);
+        }
 
-            return new Result
+        return new Result
+        {
+            Success = false,
+            UpdatedPartitions = Array.Empty<string>(),
+            SkippedPartitions = Array.Empty<string>(),
+            RollbackApplied = false,
+            Errors = new[]
             {
-                Success = false,
-                UpdatedPartitions = Array.Empty<string>(),
-                SkippedPartitions = Array.Empty<string>(),
-                RollbackApplied = false,
-                Errors = new[]
+                new Error
                 {
-                    new Error
-                    {
-                        Message = $"{errorMessage}\n{exception.Message}",
-                        AdditionalInfo = exception,
-                    },
+                    Message = $"{errorMessage}\n{exception.Message}",
+                    AdditionalInfo = exception,
                 },
-            };
-        }
+            },
+        };
+    }
 
-        /// <summary>
-        /// Handler for exceptions
-        /// </summary>
-        /// <returns>Throw exception if a flag is true, else return Result with Error info</returns>
-        public static Result Handle(
-                List<Error> errors,
-                bool throwOnFailure,
-                string errorMessage,
-                List<string> updatedPartitions,
-                List<string> skippedPartitions,
-                bool rollbackApplied)
+    /// <summary>
+    /// Handler for exceptions
+    /// </summary>
+    /// <returns>Throw exception if a flag is true, else return Result with Error info</returns>
+    public static Result Handle(
+            List<Error> errors,
+            bool throwOnFailure,
+            string errorMessage,
+            List<string> updatedPartitions,
+            List<string> skippedPartitions,
+            bool rollbackApplied)
+    {
+        if (throwOnFailure)
         {
-            if (throwOnFailure)
-            {
-                var combinedMessage = $"{errorMessage}\n{string.Join("\n", errors.Select(e => e.Message))}";
-                throw new Exception(combinedMessage, new AggregateException(errors.Select(e => e.AdditionalInfo as Exception)));
-            }
-
-            return new Result
-            {
-                Success = false,
-                UpdatedPartitions = updatedPartitions.ToArray(),
-                SkippedPartitions = skippedPartitions.ToArray(),
-                RollbackApplied = rollbackApplied,
-                Errors = errors.ToArray(),
-            };
+            var combinedMessage = $"{errorMessage}\n{string.Join("\n", errors.Select(e => e.Message))}";
+            throw new Exception(combinedMessage, new AggregateException(errors.Select(e => e.AdditionalInfo as Exception)));
         }
+
+        return new Result
+        {
+            Success = false,
+            UpdatedPartitions = updatedPartitions.ToArray(),
+            SkippedPartitions = skippedPartitions.ToArray(),
+            RollbackApplied = rollbackApplied,
+            Errors = errors.ToArray(),
+        };
     }
 }

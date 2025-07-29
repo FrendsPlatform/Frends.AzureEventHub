@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,13 +9,12 @@ using Azure.Identity;
 using Azure.Storage.Blobs;
 using Frends.AzureEventHub.UpdateCheckpoint.Definitions;
 using Frends.AzureEventHub.UpdateCheckpoint.Helpers;
-using static Frends.AzureEventHub.UpdateCheckpoint.Definitions.Enums;
 
 namespace Frends.AzureEventHub.UpdateCheckpoint;
 
 /// <summary>
 /// Task class.
-/// </summary>
+/// </summary>using
 public static class AzureEventHub
 {
     /// <summary>

@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Azure.Storage.Blobs;
 using Frends.AzureEventHub.UpdateCheckpoint.Definitions;
 using NUnit.Framework;
-using static Frends.AzureEventHub.UpdateCheckpoint.Definitions.Enums;
 
 namespace Frends.AzureEventHub.UpdateCheckpoint.Tests;
 

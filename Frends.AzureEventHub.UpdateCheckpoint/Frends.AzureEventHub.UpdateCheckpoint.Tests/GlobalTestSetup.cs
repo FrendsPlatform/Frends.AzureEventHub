@@ -1,18 +1,13 @@
-﻿using System.IO;
-using dotenv.net;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 
-namespace Frends.AzureEventHub.UpdateCheckpoint.Tests
+namespace Frends.AzureEventHub.UpdateCheckpoint.Tests;
+
+[SetUpFixture]
+public class GlobalTestSetup
 {
-    [SetUpFixture]
-    public class GlobalTestSetup
+    [OneTimeSetUp]
+    public void GlobalSetup()
     {
-        [OneTimeSetUp]
-        public void GlobalSetup()
-        {
-            var root = Directory.GetCurrentDirectory();
-            string projDir = Directory.GetParent(root).Parent.Parent.FullName;
-            DotEnv.Load(options: new DotEnvOptions(envFilePaths: new[] { $"{projDir}/.env.local" }));
-        }
+        DotNetEnv.Env.TraversePath().Load("./.env.local");
     }
 }

@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using static Frends.AzureEventHub.UpdateCheckpoint.Definitions.Enums;
 
 namespace Frends.AzureEventHub.UpdateCheckpoint.Definitions;
 
