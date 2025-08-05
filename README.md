@@ -5,6 +5,7 @@ Frends Tasks for Azure Event Hub operations.
 
 - [Frends.AzureEventHub.Send](Frends.AzureEventHub.Send/README.md)
 - [Frends.AzureEventHub.Receive](Frends.AzureEventHub.Receive/README.md)
+- [Frends.AzureEventHub.UpdateCheckpoint](Frends.AzureEventHub.UpdateCheckpoint/README.md)
 
 # Contributing
 When contributing to this repository, please first discuss the change you wish to make via issue, email, or any other method with the owners of this repository before making a change.
