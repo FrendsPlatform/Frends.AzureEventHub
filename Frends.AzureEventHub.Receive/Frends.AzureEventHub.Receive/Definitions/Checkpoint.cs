@@ -20,6 +20,8 @@ public class Checkpoint
     /// The name of the blob container.
     /// </summary>
     /// <example>examplecontainer</example>
+    [DisplayFormat(DataFormatString = "Text")]
+    [UIHint(nameof(AuthenticationMethod), "", AuthenticationMethod.ConnectionString)]
     public string ContainerName { get; set; }
 
     /// <summary>
