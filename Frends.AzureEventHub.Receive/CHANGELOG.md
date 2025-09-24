@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.5.0] - 2025-09-22
+### Changed
+- Show ContainerName parameter only when AuthenticationMethod is set to ConnectionString.
+
 ## [2.4.0] - 2024-11-13
 ### Changed
 - Upgraded Azure.Messaging.EventHubs to version 5.11.5.
