@@ -16,12 +16,6 @@ public class Options
     public bool FailIfPartitionMissing { get; set; }
 
     /// <summary>
-    /// Adjust checkpoint timestamp backward or forward. Optional.
-    /// </summary>
-    /// <example>00:05:00</example>
-    public TimeSpan? TimestampAdjustment { get; set; }
-
-    /// <summary>
     /// True: Throw an exception.
     /// False: Error will be added to the Result.Error.AdditionalInfo list instead of stopping the Task.
     /// </summary>

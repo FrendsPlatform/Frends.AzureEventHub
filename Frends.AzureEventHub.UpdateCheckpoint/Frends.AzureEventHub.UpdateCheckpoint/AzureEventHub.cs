@@ -105,17 +105,14 @@ public static class AzureEventHub
                             Message = $"Checkpoint not found for partition {partitionId}",
                             AdditionalInfo = new Exception($"Partition ID: {partitionId} checkpoint does not exist."),
                         });
+
                         continue;
                     }
 
-                    var blobContent = await blobClient.DownloadContentAsync(cancellationToken);
-                    var json = JsonDocument.Parse(blobContent.Value.Content.ToString());
+                    var properties = await blobClient.GetPropertiesAsync();
+                    var metadata = properties.Value.Metadata;
 
-                    var properties = json.RootElement;
-
-                    long offset = properties.GetProperty("offset").GetInt64();
-                    long sequenceNumber = properties.GetProperty("sequenceNumber").GetInt64();
-                    DateTimeOffset enqueuedTime = properties.GetProperty("enqueuedTimeUtc").GetDateTimeOffset();
+                    long sequenceNumber = long.Parse(metadata["sequencenumber"]);
 
                     if (input.RollbackEvents > 0)
                     {
@@ -123,18 +120,9 @@ public static class AzureEventHub
                         rollbackApplied = true;
                     }
 
-                    if (options.TimestampAdjustment.HasValue)
-                        enqueuedTime = enqueuedTime.Add(options.TimestampAdjustment.Value);
+                    metadata["sequencenumber"] = sequenceNumber.ToString();
 
-                    var newCheckpoint = new
-                    {
-                        offset,
-                        sequenceNumber,
-                        enqueuedTimeUtc = enqueuedTime.ToString("o"),
-                    };
-
-                    using var stream = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(newCheckpoint));
-                    await blobClient.UploadAsync(stream, overwrite: true, cancellationToken);
+                    await blobClient.SetMetadataAsync(metadata, cancellationToken: cancellationToken);
 
                     updatedPartitions.Add(partitionId);
                 }
