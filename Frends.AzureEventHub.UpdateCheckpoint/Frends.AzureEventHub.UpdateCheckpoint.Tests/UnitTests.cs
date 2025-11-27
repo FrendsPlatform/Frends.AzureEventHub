@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Azure.Storage.Blobs;
 using Frends.AzureEventHub.UpdateCheckpoint.Definitions;
 using NUnit.Framework;
+using NUnit.Framework.Legacy;
 
 namespace Frends.AzureEventHub.UpdateCheckpoint.Tests;
 
@@ -360,6 +361,39 @@ public class UpdateCheckpointsTests
             Assert.That(ex.Message, Contains.Substring("OAuth configuration must be provided when using OAuth auth method"));
         }
     }
+
+    [Test]
+    public async Task UpdateCheckpoints_MissingSequenceNumberMetadata_ThrowsInvalidOperation()
+    {
+        var partitionId = "0";
+        var blobClient = _containerClient.GetBlobClient($"{_eventHubNamespace}/{_eventHubName}/{_consumerGroup}/checkpoint/{partitionId}");
+        using var emptyStream = new MemoryStream();
+        await blobClient.UploadAsync(emptyStream, overwrite: true);
+
+        var input = new Input
+        {
+            EventHubName = _eventHubName,
+            ConsumerGroup = _consumerGroup,
+            PartitionIds = new[] { partitionId },
+            RollbackEvents = 1,
+        };
+
+        var connection = new Connection
+        {
+            AuthMethod = AuthMethod.ConnectionString,
+            ConnectionString = _blobStorageConnectionString,
+            ContainerName = _containerName,
+            EventHubNamespace = _eventHubNamespace,
+        };
+
+        var options = new Options { ThrowErrorOnFailure = true };
+
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
+
+        StringAssert.Contains("missing required 'sequencenumber' metadata", ex.Message);
+    }
+
 
     private async Task CreateTestCheckpoints()
     {
