@@ -394,6 +394,46 @@ public class UpdateCheckpointsTests
         StringAssert.Contains("missing required 'sequencenumber' metadata", ex.Message);
     }
 
+    [Test]
+    public async Task UpdateCheckpoints_InvalidSequenceNumberMetadata_ThrowsInvalidOperation()
+    {
+        var partitionId = "0";
+        var blobClient = _containerClient.GetBlobClient($"{_eventHubNamespace}/{_eventHubName}/{_consumerGroup}/checkpoint/{partitionId}");
+        using var emptyStream = new MemoryStream();
+        await blobClient.UploadAsync(emptyStream, overwrite: true);
+
+        var metadata = new Dictionary<string, string>
+        {
+            ["offset"] = "1000",
+            ["sequencenumber"] = "INVALID_NUMBER",
+            ["clientidentifier"] = Guid.NewGuid().ToString(),
+        };
+        await blobClient.SetMetadataAsync(metadata);
+
+        var input = new Input
+        {
+            EventHubName = _eventHubName,
+            ConsumerGroup = _consumerGroup,
+            PartitionIds = new[] { partitionId },
+            RollbackEvents = 1,
+        };
+
+        var connection = new Connection
+        {
+            AuthMethod = AuthMethod.ConnectionString,
+            ConnectionString = _blobStorageConnectionString,
+            ContainerName = _containerName,
+            EventHubNamespace = _eventHubNamespace,
+        };
+
+        var options = new Options { ThrowErrorOnFailure = true };
+
+        var ex = Assert.ThrowsAsync<Exception>(async () =>
+            await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
+
+        StringAssert.Contains("has invalid 'sequencenumber' value", ex.Message);
+    }
+
 
     private async Task CreateTestCheckpoints()
     {
