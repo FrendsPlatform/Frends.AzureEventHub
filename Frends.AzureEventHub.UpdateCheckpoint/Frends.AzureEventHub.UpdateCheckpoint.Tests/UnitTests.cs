@@ -388,7 +388,7 @@ public class UpdateCheckpointsTests
 
         var options = new Options { ThrowErrorOnFailure = true };
 
-        var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        var ex = Assert.ThrowsAsync<Exception>(async () =>
             await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
 
         StringAssert.Contains("missing required 'sequencenumber' metadata", ex.Message);
