@@ -21,7 +21,7 @@ public static class Helpers
         return null;
     }
 
-    public static string ExtractEntityPathFromConnectionString(string connectionString)
+    public static string ExtractEntityPath(string connectionString)
     {
         if (string.IsNullOrWhiteSpace(connectionString))
             return null;

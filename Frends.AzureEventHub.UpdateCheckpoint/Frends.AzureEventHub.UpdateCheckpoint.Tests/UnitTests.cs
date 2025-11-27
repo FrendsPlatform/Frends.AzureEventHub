@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
@@ -33,7 +32,7 @@ public class UpdateCheckpointsTests
         _containerName = "checkpointcontainer" + Guid.NewGuid().ToString();
         _eventHubNamespace = Environment.GetEnvironmentVariable("HIQ_AZUREEVENTHUB_FULLYQUALIFIEDNAMESPACE");
         var eventHubConnectionString = Environment.GetEnvironmentVariable("EVENT_HUB_CONNECTION_STRING");
-        _eventHubName = Helpers.ExtractEntityPathFromConnectionString(eventHubConnectionString);
+        _eventHubName = Helpers.ExtractEntityPath(eventHubConnectionString);
         _consumerGroup = "$Default";
         _sasToken = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_TESTSORAGE01ACCESSKEY");
         _tenantId = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_TENANTID");

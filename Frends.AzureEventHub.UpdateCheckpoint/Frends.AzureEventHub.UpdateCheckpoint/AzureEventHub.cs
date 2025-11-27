@@ -14,7 +14,7 @@ namespace Frends.AzureEventHub.UpdateCheckpoint;
 
 /// <summary>
 /// Task class.
-/// </summary>using
+/// </summary>
 public static class AzureEventHub
 {
     /// <summary>
@@ -109,10 +109,20 @@ public static class AzureEventHub
                         continue;
                     }
 
-                    var properties = await blobClient.GetPropertiesAsync();
+                    var properties = await blobClient.GetPropertiesAsync(cancellationToken: cancellationToken);
                     var metadata = properties.Value.Metadata;
 
-                    long sequenceNumber = long.Parse(metadata["sequencenumber"]);
+                    if (!metadata.TryGetValue("sequencenumber", out var sequenceNumberStr))
+                    {
+                        throw new InvalidOperationException(
+                            $"Checkpoint for partition {partitionId} is missing required 'sequencenumber' metadata.");
+                    }
+
+                    if (!long.TryParse(sequenceNumberStr, out long sequenceNumber))
+                    {
+                        throw new InvalidOperationException(
+                            $"Checkpoint for partition {partitionId} has invalid 'sequencenumber' value: {sequenceNumberStr}");
+                    }
 
                     if (input.RollbackEvents > 0)
                     {
