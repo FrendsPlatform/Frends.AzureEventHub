@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Azure.Storage.Blobs;
 using Frends.AzureEventHub.UpdateCheckpoint.Definitions;
 using NUnit.Framework;
-using NUnit.Framework.Legacy;
 
 namespace Frends.AzureEventHub.UpdateCheckpoint.Tests;
 
@@ -391,7 +390,7 @@ public class UpdateCheckpointsTests
         var ex = Assert.ThrowsAsync<Exception>(async () =>
             await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
 
-        StringAssert.Contains("missing required 'sequencenumber' metadata", ex.Message);
+        Assert.That(ex.Message, Does.Contain("missing required 'sequencenumber' metadata"));
     }
 
     [Test]
@@ -431,9 +430,8 @@ public class UpdateCheckpointsTests
         var ex = Assert.ThrowsAsync<Exception>(async () =>
             await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
 
-        StringAssert.Contains("has invalid 'sequencenumber' value", ex.Message);
+        Assert.That(ex.Message, Does.Contain("has invalid 'sequencenumber' value"));
     }
-
 
     private async Task CreateTestCheckpoints()
     {

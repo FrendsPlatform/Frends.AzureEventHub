@@ -59,14 +59,14 @@ internal class IntegrationTest
     }
 
     [Test]
-    public async Task UpdateCheckpoints_Integration_EventProcessorResumesFromUpdatedCheckpoint2()
+    public async Task UpdateCheckpoints_Integration_EventProcessorResumesFromUpdatedCheckpoint()
     {
         // ARRANGE
         SetupEnvironment();
         await CreateContainer();
         await SendEventsToPartition("0", 5);
 
-        var sequenceNumber = await RunProcessorUntilEventsRead(3);
+        var sequenceNumber = await RunProcessor(3, false, false);
         await CreateCheckpoint(sequenceNumber);
 
         // ACT
@@ -77,7 +77,7 @@ internal class IntegrationTest
         Assert.That(updated, Is.EqualTo(sequenceNumber - 1));
 
         // ASSERT – processor resumes from updated checkpoint
-        await RunProcessorAfterRollback();
+        await RunProcessor(2, true, true);
         Assert.That(_resumedEvents.Count, Is.GreaterThan(0));
 
         await CleanupContainer();
@@ -101,28 +101,6 @@ internal class IntegrationTest
         await producer.DisposeAsync();
     }
 
-    private async Task<long> RunProcessorUntilEventsRead(int required)
-    {
-        var tcs = new TaskCompletionSource<bool>();
-        var read = new List<EventData>();
-
-        var processor = new EventProcessorClient(_container, _consumer, _eventHubConn);
-        processor.ProcessEventAsync += args =>
-        {
-            read.Add(args.Data);
-            if (read.Count >= required) tcs.TrySetResult(true);
-            return Task.CompletedTask;
-        };
-        processor.ProcessErrorAsync += _ => Task.CompletedTask;
-
-        await processor.StartProcessingAsync();
-        await tcs.Task;
-        await Task.Delay(1000);
-        await processor.StopProcessingAsync();
-
-        return read.Last().SequenceNumber;
-    }
-
     private async Task CreateCheckpoint(long seq)
     {
         var blob = _container.GetBlobClient($"{_hubNamespace}/{_hubName}/{_consumer}/checkpoint/0");
@@ -140,28 +118,51 @@ internal class IntegrationTest
         return long.Parse(props.Value.Metadata["sequencenumber"]);
     }
 
-    private async Task RunProcessorAfterRollback()
+    private async Task<long> RunProcessor(
+        int eventCountRequired,
+        bool collectEventText,
+        bool sendTriggerEvent)
     {
         var tcs = new TaskCompletionSource<bool>();
-        var p = new EventProcessorClient(_container, _consumer, _eventHubConn);
+        var read = new List<EventData>();
 
-        p.ProcessEventAsync += args =>
+        var processor = new EventProcessorClient(_container, _consumer, _eventHubConn);
+
+        processor.ProcessEventAsync += args =>
         {
-            var text = Encoding.UTF8.GetString(args.Data.EventBody.ToArray());
-            _resumedEvents.Add(text);
-            if (_resumedEvents.Count >= 2) tcs.TrySetResult(true);
+            read.Add(args.Data);
+
+            if (collectEventText)
+            {
+                var text = Encoding.UTF8.GetString(args.Data.EventBody.ToArray());
+                _resumedEvents.Add(text);
+            }
+
+            if (read.Count >= eventCountRequired)
+                tcs.TrySetResult(true);
+
             return Task.CompletedTask;
         };
 
-        p.ProcessErrorAsync += _ => Task.CompletedTask;
+        processor.ProcessErrorAsync += _ => Task.CompletedTask;
 
-        await p.StartProcessingAsync();
+        await processor.StartProcessingAsync();
 
-        var prod = new EventHubProducerClient(_eventHubConn);
-        await prod.SendAsync(new[] { new EventData(Encoding.UTF8.GetBytes("trigger")) });
+        if (sendTriggerEvent)
+        {
+            var prod = new EventHubProducerClient(_eventHubConn);
+            await prod.SendAsync(new[] { new EventData(Encoding.UTF8.GetBytes("trigger")) });
+            await Task.WhenAny(tcs.Task, Task.Delay(15000));
+        }
+        else
+        {
+            await tcs.Task;
+            await Task.Delay(1000);
+        }
 
-        await Task.WhenAny(tcs.Task, Task.Delay(15000));
-        await p.StopProcessingAsync();
+        await processor.StopProcessingAsync();
+
+        return read.Count > 0 ? read.Last().SequenceNumber : 0;
     }
 
     private async Task CleanupContainer() => await _container.DeleteAsync();
