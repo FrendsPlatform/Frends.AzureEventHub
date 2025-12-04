@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
@@ -26,8 +25,6 @@ public class UpdateCheckpointsTests
     private string _clientId;
     private string _clientSecret;
 
-    private Dictionary<string, DateTimeOffset> _originalTimestamps = new Dictionary<string, DateTimeOffset>();
-
     [SetUp]
     public async Task SetUp()
     {
@@ -35,17 +32,15 @@ public class UpdateCheckpointsTests
         _containerName = "checkpointcontainer" + Guid.NewGuid().ToString();
         _eventHubNamespace = Environment.GetEnvironmentVariable("HIQ_AZUREEVENTHUB_FULLYQUALIFIEDNAMESPACE");
         var eventHubConnectionString = Environment.GetEnvironmentVariable("EVENT_HUB_CONNECTION_STRING");
-        _eventHubName = ExtractEntityPathFromConnectionString(eventHubConnectionString);
+        _eventHubName = Helpers.ExtractEntityPath(eventHubConnectionString);
         _consumerGroup = "$Default";
         _sasToken = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_TESTSORAGE01ACCESSKEY");
         _tenantId = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_TENANTID");
         _clientId = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_APPID");
         _clientSecret = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_CLIENTSECRET");
-        _storageAccountName = ExtractStorageAccountName(_blobStorageConnectionString);
+        _storageAccountName = Helpers.ExtractStorageAccountName(_blobStorageConnectionString);
         _containerClient = new BlobContainerClient(_blobStorageConnectionString, _containerName);
         await _containerClient.CreateIfNotExistsAsync();
-
-        _originalTimestamps.Clear();
 
         await CreateTestCheckpoints();
     }
@@ -79,7 +74,6 @@ public class UpdateCheckpointsTests
         {
             FailIfPartitionMissing = false,
             ThrowErrorOnFailure = false,
-            TimestampAdjustment = TimeSpan.FromMinutes(5),
         };
 
         var result = await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
@@ -157,7 +151,6 @@ public class UpdateCheckpointsTests
         {
             FailIfPartitionMissing = false,
             ThrowErrorOnFailure = true,
-            TimestampAdjustment = TimeSpan.FromMinutes(5),
         };
 
         try
@@ -229,38 +222,6 @@ public class UpdateCheckpointsTests
         {
             Assert.That(ex.Message, Contains.Substring("Checkpoint not found for partition 999"));
         }
-    }
-
-    [Test]
-    public async Task UpdateCheckpoints_WithTimestampAdjustment_UpdatesTimestamp()
-    {
-        var input = new Input
-        {
-            EventHubName = _eventHubName,
-            ConsumerGroup = _consumerGroup,
-            PartitionIds = ["0"],
-            RollbackEvents = 0,
-        };
-
-        var connection = new Connection
-        {
-            AuthMethod = AuthMethod.ConnectionString,
-            ConnectionString = _blobStorageConnectionString,
-            ContainerName = _containerName,
-            EventHubNamespace = _eventHubNamespace,
-        };
-
-        var timestampAdjustment = TimeSpan.FromHours(2);
-        var options = new Options
-        {
-            TimestampAdjustment = timestampAdjustment,
-            ThrowErrorOnFailure = false,
-        };
-
-        var result = await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
-
-        Assert.That(result.Success, Is.True);
-        await VerifyTimestampAdjustment("0", timestampAdjustment);
     }
 
     [Test]
@@ -400,62 +361,100 @@ public class UpdateCheckpointsTests
         }
     }
 
-    private string ExtractStorageAccountName(string connectionString)
+    [Test]
+    public async Task UpdateCheckpoints_MissingSequenceNumberMetadata_ThrowsInvalidOperation()
     {
-        if (string.IsNullOrWhiteSpace(connectionString))
-            return null;
+        var partitionId = "0";
+        var blobClient = _containerClient.GetBlobClient($"{_eventHubNamespace}/{_eventHubName}/{_consumerGroup}/checkpoint/{partitionId}");
+        using var emptyStream = new MemoryStream();
+        await blobClient.UploadAsync(emptyStream, overwrite: true);
 
-        var parts = connectionString.Split(';');
-        foreach (var part in parts)
+        var input = new Input
         {
-            if (part.StartsWith("AccountName=", StringComparison.OrdinalIgnoreCase))
-            {
-                return part.Substring("AccountName=".Length);
-            }
-        }
+            EventHubName = _eventHubName,
+            ConsumerGroup = _consumerGroup,
+            PartitionIds = new[] { partitionId },
+            RollbackEvents = 1,
+        };
 
-        return null;
+        var connection = new Connection
+        {
+            AuthMethod = AuthMethod.ConnectionString,
+            ConnectionString = _blobStorageConnectionString,
+            ContainerName = _containerName,
+            EventHubNamespace = _eventHubNamespace,
+        };
+
+        var options = new Options { ThrowErrorOnFailure = true };
+
+        var ex = Assert.ThrowsAsync<Exception>(async () =>
+            await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
+
+        Assert.That(ex.Message, Does.Contain("missing required 'sequencenumber' metadata"));
     }
 
-    private string ExtractEntityPathFromConnectionString(string connectionString)
+    [Test]
+    public async Task UpdateCheckpoints_InvalidSequenceNumberMetadata_ThrowsInvalidOperation()
     {
-        if (string.IsNullOrWhiteSpace(connectionString))
-            return null;
+        var partitionId = "0";
+        var blobClient = _containerClient.GetBlobClient($"{_eventHubNamespace}/{_eventHubName}/{_consumerGroup}/checkpoint/{partitionId}");
+        using var emptyStream = new MemoryStream();
+        await blobClient.UploadAsync(emptyStream, overwrite: true);
 
-        var parts = connectionString.Split(';');
-        foreach (var part in parts)
+        var metadata = new Dictionary<string, string>
         {
-            if (part.StartsWith("EntityPath=", StringComparison.OrdinalIgnoreCase))
-            {
-                return part.Substring("EntityPath=".Length);
-            }
-        }
+            ["offset"] = "1000",
+            ["sequencenumber"] = "INVALID_NUMBER",
+            ["clientidentifier"] = Guid.NewGuid().ToString(),
+        };
+        await blobClient.SetMetadataAsync(metadata);
 
-        return null;
+        var input = new Input
+        {
+            EventHubName = _eventHubName,
+            ConsumerGroup = _consumerGroup,
+            PartitionIds = new[] { partitionId },
+            RollbackEvents = 1,
+        };
+
+        var connection = new Connection
+        {
+            AuthMethod = AuthMethod.ConnectionString,
+            ConnectionString = _blobStorageConnectionString,
+            ContainerName = _containerName,
+            EventHubNamespace = _eventHubNamespace,
+        };
+
+        var options = new Options { ThrowErrorOnFailure = true };
+
+        var ex = Assert.ThrowsAsync<Exception>(async () =>
+            await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
+
+        Assert.That(ex.Message, Does.Contain("has invalid 'sequencenumber' value"));
     }
 
     private async Task CreateTestCheckpoints()
     {
-        var partition0Timestamp = DateTimeOffset.UtcNow.AddHours(-1);
-        _originalTimestamps["0"] = partition0Timestamp;
-        await CreateCheckpoint("0", 1000, 100, partition0Timestamp);
-        await CreateCheckpoint("1", 2000, 200, DateTimeOffset.UtcNow.AddHours(-2));
+        await CreateCheckpoint("0", 1000, 100);
+        await CreateCheckpoint("1", 2000, 200);
     }
 
-    private async Task CreateCheckpoint(string partitionId, long offset, long sequenceNumber, DateTimeOffset enqueuedTime)
+    private async Task CreateCheckpoint(string partitionId, long offset, long sequenceNumber)
     {
         var blobName = $"{_eventHubNamespace}/{_eventHubName}/{_consumerGroup}/checkpoint/{partitionId}";
         var blobClient = _containerClient.GetBlobClient(blobName);
 
-        var checkpoint = new
+        using var empty = new MemoryStream();
+        await blobClient.UploadAsync(empty, overwrite: true);
+
+        var metadata = new Dictionary<string, string>
         {
-            offset,
-            sequenceNumber,
-            enqueuedTimeUtc = enqueuedTime.ToString("o"),
+            ["offset"] = offset.ToString(),
+            ["sequencenumber"] = sequenceNumber.ToString(),
+            ["clientidentifier"] = Guid.NewGuid().ToString(),
         };
 
-        using var stream = new MemoryStream(JsonSerializer.SerializeToUtf8Bytes(checkpoint));
-        await blobClient.UploadAsync(stream, overwrite: true);
+        await blobClient.SetMetadataAsync(metadata);
     }
 
     private async Task VerifyCheckpointRollback(string partitionId, int rollbackEvents)
@@ -463,34 +462,14 @@ public class UpdateCheckpointsTests
         var blobName = $"{_eventHubNamespace}/{_eventHubName}/{_consumerGroup}/checkpoint/{partitionId}";
         var blobClient = _containerClient.GetBlobClient(blobName);
 
-        var blobContent = await blobClient.DownloadContentAsync();
-        var json = JsonDocument.Parse(blobContent.Value.Content.ToString());
-        var properties = json.RootElement;
+        var props = await blobClient.GetPropertiesAsync();
+        var metadata = props.Value.Metadata;
 
-        long sequenceNumber = properties.GetProperty("sequenceNumber").GetInt64();
+        long seq = long.Parse(metadata["sequencenumber"]);
 
-        // Original sequence numbers were 100 and 200, so after rollback of 5:
         if (partitionId == "0")
-            Assert.That(sequenceNumber, Is.EqualTo(100 - rollbackEvents));
+            Assert.That(seq, Is.EqualTo(100 - rollbackEvents));
         else if (partitionId == "1")
-            Assert.That(sequenceNumber, Is.EqualTo(200 - rollbackEvents));
-    }
-
-    private async Task VerifyTimestampAdjustment(string partitionId, TimeSpan expectedAdjustment)
-    {
-        var blobName = $"{_eventHubNamespace}/{_eventHubName}/{_consumerGroup}/checkpoint/{partitionId}";
-        var blobClient = _containerClient.GetBlobClient(blobName);
-
-        var response = await blobClient.DownloadContentAsync();
-        var checkpointJson = response.Value.Content.ToString();
-        var checkpoint = JsonSerializer.Deserialize<JsonElement>(checkpointJson);
-
-        var storedTimestampString = checkpoint.GetProperty("enqueuedTimeUtc").GetString();
-        var storedTimestamp = DateTimeOffset.Parse(storedTimestampString);
-
-        var originalTimestamp = _originalTimestamps[partitionId];
-        var expectedTimestamp = originalTimestamp.Add(expectedAdjustment);
-
-        Assert.That(storedTimestamp, Is.EqualTo(expectedTimestamp).Within(TimeSpan.FromMilliseconds(1)));
+            Assert.That(seq, Is.EqualTo(200 - rollbackEvents));
     }
 }
