@@ -11,9 +11,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		CHANGELOG.md = CHANGELOG.md
 		README.md = README.md
-		..\.github\workflows\Replace_build_and_test_on_main.yml = ..\.github\workflows\Replace_build_and_test_on_main.yml
-		..\.github\workflows\Replace_build_and_test_on_push.yml = ..\.github\workflows\Replace_build_and_test_on_push.yml
-		..\.github\workflows\Replace_release.yml = ..\.github\workflows\Replace_release.yml
+		..\.github\workflows\Send_build_and_test_on_main.yml = ..\.github\workflows\Send_build_and_test_on_main.yml
+		..\.github\workflows\Send_build_and_test_on_push.yml = ..\.github\workflows\Send_build_and_test_on_push.yml
+		..\.github\workflows\Send_release.yml = ..\.github\workflows\Send_release.yml
 	EndProjectSection
 EndProject
 Global
