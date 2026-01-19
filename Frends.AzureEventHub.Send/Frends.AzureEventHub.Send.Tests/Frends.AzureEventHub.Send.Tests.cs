@@ -15,7 +15,7 @@ class Send
 
     public Send()
     {
-        _connectionString = Environment.GetEnvironmentVariable("EVENT_HUB_CONNECTION_STRING");
+        _connectionString = Environment.GetEnvironmentVariable("FRENDS__AZURE_EVENT_HUB__CONNECTION_STRING");
     }
 
     [Test]
@@ -41,6 +41,7 @@ class Send
     {
         // create big message
         var sb = new StringBuilder();
+
         for (var i = 0; i < 10000; i++)
         {
             sb.Append("this is a string that is going to be long");
@@ -55,8 +56,7 @@ class Send
                 new EventHubMessage { Message = message },
             }
         };
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(
-            () => AzureEventHub.Send(input, _options, CancellationToken.None));
+        var exception = Assert.ThrowsAsync<InvalidOperationException>(() => AzureEventHub.Send(input, _options, CancellationToken.None));
         Assert.IsTrue(exception.Message.Contains("Event 0 is too large for the batch"));
     }
 
@@ -72,8 +72,7 @@ class Send
             }
         };
 
-        var exception = Assert.ThrowsAsync<FormatException>(
-            () => AzureEventHub.Send(input, _options, CancellationToken.None));
+        var exception = Assert.ThrowsAsync<FormatException>(() => AzureEventHub.Send(input, _options, CancellationToken.None));
     }
 
     [Test]
@@ -88,7 +87,6 @@ class Send
             }
         };
 
-        var exception = Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => AzureEventHub.Send(input, _options, CancellationToken.None));
+        var exception = Assert.ThrowsAsync<UnauthorizedAccessException>(() => AzureEventHub.Send(input, _options, CancellationToken.None));
     }
 }

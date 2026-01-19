@@ -13,7 +13,7 @@ jobs:
     uses: FrendsPlatform/FrendsTasks/.github/workflows/linux_build_main.yml@main
     with:
       workdir: Frends.AzureEventHub.Send
-      env_var_name_1: EVENT_HUB_CONNECTION_STRING
+      env_var_name_1: FRENDS__AZURE_EVENT_HUB__CONNECTION_STRING
     secrets:
       badge_service_api_key: ${{ secrets.BADGE_SERVICE_API_KEY }}
-      env_var_value_1: ${{ secrets.EVENT_HUB_CONNECTION_STRING }}
+      env_var_value_1: ${{ secrets.FRENDS__AZURE_EVENT_HUB__CONNECTION_STRING }}

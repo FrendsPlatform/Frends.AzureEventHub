@@ -13,20 +13,20 @@ jobs:
     uses: FrendsPlatform/FrendsTasks/.github/workflows/linux_build_main.yml@main
     with:
       workdir: Frends.AzureEventHub.UpdateCheckpoint
-      env_var_name_1: EVENT_HUB_CONNECTION_STRING
-      env_var_name_2: HIQ_AZUREBLOBSTORAGE_APPID
-      env_var_name_3: HIQ_AZUREBLOBSTORAGE_CLIENTSECRET
-      env_var_name_4: HIQ_AZUREBLOBSTORAGE_CONNSTRING
-      env_var_name_5: HIQ_AZUREBLOBSTORAGE_TENANTID
-      env_var_name_6: HIQ_AZUREBLOBSTORAGE_TESTSORAGE01ACCESSKEY
-      env_var_name_7: HIQ_AZUREEVENTHUB_FULLYQUALIFIEDNAMESPACE
+      env_var_name_1: FRENDS__AZURE_EVENT_HUB__CONNECTION_STRING
+      env_var_name_2: FRENDS__AZURE_BLOB_STORAGE__APP_ID
+      env_var_name_3: FRENDS__AZURE_BLOB_STORAGE__CLIENT_SECRET
+      env_var_name_4: FRENDS__AZURE_BLOB_STORAGE__CONNECTION_STRING
+      env_var_name_5: FRENDS__AZURE_BLOB_STORAGE__TENANT_ID
+      env_var_name_6: FRENDS__AZURE_BLOB_STORAGE__ACCESS_KEY
+      env_var_name_7: FRENDS__AZURE_EVENT_HUB__FULLY_QUALIFIED_NAMESPACE
       dotnet_version: 8.0.x
     secrets:
       badge_service_api_key: ${{ secrets.BADGE_SERVICE_API_KEY }}
-      env_var_value_1: ${{ secrets.EVENT_HUB_CONNECTION_STRING }}
-      env_var_value_2: ${{ secrets.HIQ_AZUREBLOBSTORAGE_APPID }}
-      env_var_value_3: ${{ secrets.HIQ_AZUREBLOBSTORAGE_CLIENTSECRET }}
-      env_var_value_4: ${{ secrets.HIQ_AZUREBLOBSTORAGE_CONNSTRING }}
-      env_var_value_5: ${{ secrets.HIQ_AZUREBLOBSTORAGE_TENANTID }}
-      env_var_value_6: ${{ secrets.HIQ_AZUREBLOBSTORAGE_TESTSORAGE01ACCESSKEY }}
-      env_var_value_7: ${{ secrets.HIQ_AZUREEVENTHUB_FULLYQUALIFIEDNAMESPACE }}
+      env_var_value_1: ${{ secrets.FRENDS__AZURE_EVENT_HUB__CONNECTION_STRING }}
+      env_var_value_2: ${{ secrets.FRENDS__AZURE_BLOB_STORAGE__APP_ID }}
+      env_var_value_3: ${{ secrets.FRENDS__AZURE_BLOB_STORAGE__CLIENT_SECRET }}
+      env_var_value_4: ${{ secrets.FRENDS__AZURE_BLOB_STORAGE__CONNECTION_STRING }}
+      env_var_value_5: ${{ secrets.FRENDS__AZURE_BLOB_STORAGE__TENANT_ID }}
+      env_var_value_6: ${{ secrets.FRENDS__AZURE_BLOB_STORAGE__ACCESS_KEY }}
+      env_var_value_7: ${{ secrets.FRENDS__AZURE_EVENT_HUB__FULLY_QUALIFIED_NAMESPACE }}

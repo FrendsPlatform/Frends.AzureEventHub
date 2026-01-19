@@ -32,9 +32,9 @@ internal class IntegrationTest
 
     public void SetupEnvironment()
     {
-        _eventHubConn = Environment.GetEnvironmentVariable("EVENT_HUB_CONNECTION_STRING");
-        _blobConn = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_CONNSTRING");
-        _hubNamespace = Environment.GetEnvironmentVariable("HIQ_AZUREEVENTHUB_FULLYQUALIFIEDNAMESPACE");
+        _eventHubConn = Environment.GetEnvironmentVariable("FRENDS__AZURE_EVENT_HUB__CONNECTION_STRING");
+        _blobConn = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__CONNECTION_STRING");
+        _hubNamespace = Environment.GetEnvironmentVariable("FRENDS__AZURE_EVENT_HUB__FULLY_QUALIFIED_NAMESPACE");
         _hubName = Helpers.ExtractEntityPath(_eventHubConn);
         _consumer = EventHubConsumerClient.DefaultConsumerGroupName;
         _containerName = "checkpoint-" + Guid.NewGuid().ToString("N");
