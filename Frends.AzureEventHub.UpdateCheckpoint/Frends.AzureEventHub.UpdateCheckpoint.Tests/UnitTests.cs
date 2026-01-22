@@ -28,16 +28,16 @@ public class UpdateCheckpointsTests
     [SetUp]
     public async Task SetUp()
     {
-        _blobStorageConnectionString = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_CONNSTRING");
+        _blobStorageConnectionString = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__CONNECTION_STRING");
         _containerName = "checkpointcontainer" + Guid.NewGuid().ToString();
-        _eventHubNamespace = Environment.GetEnvironmentVariable("HIQ_AZUREEVENTHUB_FULLYQUALIFIEDNAMESPACE");
-        var eventHubConnectionString = Environment.GetEnvironmentVariable("EVENT_HUB_CONNECTION_STRING");
+        _eventHubNamespace = Environment.GetEnvironmentVariable("FRENDS__AZURE_EVENT_HUB__FULLY_QUALIFIED_NAMESPACE");
+        var eventHubConnectionString = Environment.GetEnvironmentVariable("FRENDS__AZURE_EVENT_HUB__CONNECTION_STRING");
         _eventHubName = Helpers.ExtractEntityPath(eventHubConnectionString);
         _consumerGroup = "$Default";
-        _sasToken = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_TESTSORAGE01ACCESSKEY");
-        _tenantId = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_TENANTID");
-        _clientId = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_APPID");
-        _clientSecret = Environment.GetEnvironmentVariable("HIQ_AZUREBLOBSTORAGE_CLIENTSECRET");
+        _sasToken = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__ACCESS_KEY");
+        _tenantId = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__TENANT_ID");
+        _clientId = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__APP_ID");
+        _clientSecret = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__CLIENT_SECRET");
         _storageAccountName = Helpers.ExtractStorageAccountName(_blobStorageConnectionString);
         _containerClient = new BlobContainerClient(_blobStorageConnectionString, _containerName);
         await _containerClient.CreateIfNotExistsAsync();

@@ -17,15 +17,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Azure.Identity" Version="1.17.1" />
-        <PackageReference Include="Azure.Messaging.EventHubs" Version="5.12.2" />
-        <PackageReference Include="Azure.Messaging.EventHubs.Processor" Version="5.12.2" />
-        <PackageReference Include="Azure.Storage.Blobs" Version="12.25.0" />
+        <PackageReference Include="Azure.Identity" Version="1.17.1"/>
+        <PackageReference Include="Azure.Messaging.EventHubs" Version="5.12.2"/>
+        <PackageReference Include="Azure.Messaging.EventHubs.Processor" Version="5.12.2"/>
+        <PackageReference Include="Azure.Storage.Blobs" Version="12.27.0"/>
         <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+        <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0"/>
     </ItemGroup>
 
     <ItemGroup>

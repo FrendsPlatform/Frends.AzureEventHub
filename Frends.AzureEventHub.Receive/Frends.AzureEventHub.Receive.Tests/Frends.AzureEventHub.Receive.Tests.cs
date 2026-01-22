@@ -23,17 +23,17 @@ class Receive
     private static Consumer _consumer;
     private static Checkpoint _checkpoint;
     private static Options _options;
-    private readonly string _storageAccount = "testsorage01";
+    private readonly string _storageAccount = "stataskdevelopment";
     private static string _containerName;
     private readonly string _testFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TestFiles", "TestFile.xml");
-    private readonly string _eventHubConnectionString = Environment.GetEnvironmentVariable("EVENT_HUB_CONNECTION_STRING");
-    private readonly string _blobStorageConnectionString = Environment.GetEnvironmentVariable("HiQ_AzureBlobStorage_ConnString");
-    private readonly string _appID = Environment.GetEnvironmentVariable("HiQ_AzureBlobStorage_AppID");
-    private readonly string _tenantID = Environment.GetEnvironmentVariable("HiQ_AzureBlobStorage_TenantID");
-    private readonly string _clientSecret = Environment.GetEnvironmentVariable("HiQ_AzureBlobStorage_ClientSecret");
-    private readonly string _accessKey = Environment.GetEnvironmentVariable("HiQ_AzureBlobStorage_testsorage01AccessKey");
-    private readonly string _namespace = Environment.GetEnvironmentVariable("HIQ_AzureEventHub_FullyQualifiedNamespace");
-    private readonly string _eventhubKey = Environment.GetEnvironmentVariable("HIQ_AzureEventHub_Key");
+    private readonly string _eventHubConnectionString = Environment.GetEnvironmentVariable("FRENDS__AZURE_EVENT_HUB__CONNECTION_STRING");
+    private readonly string _blobStorageConnectionString = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__CONNECTION_STRING");
+    private readonly string _appID = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__APP_ID");
+    private readonly string _tenantID = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__TENANT_ID");
+    private readonly string _clientSecret = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__CLIENT_SECRET");
+    private readonly string _accessKey = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__ACCESS_KEY");
+    private readonly string _namespace = Environment.GetEnvironmentVariable("FRENDS__AZURE_EVENT_HUB__FULLY_QUALIFIED_NAMESPACE");
+    private readonly string _eventhubKey = Environment.GetEnvironmentVariable("FRENDS__AZURE_EVENT_HUB__ACCESS_KEY");
 
     [SetUp]
     public async Task SetUp()
@@ -184,7 +184,8 @@ class Receive
 
     private async Task GenerateEvent()
     {
-        string inputString = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer sit amet justo eget nunc elementum ultrices. Duis vitae urna ut sem laoreet bibendum id eu nisi. Nullam iaculis vehicula nulla, sed suscipit ex. Vivamus iaculis, felis eget varius dignissim, justo nunc mattis felis, vel efficitur sapien turpis non est. ";
+        string inputString =
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer sit amet justo eget nunc elementum ultrices. Duis vitae urna ut sem laoreet bibendum id eu nisi. Nullam iaculis vehicula nulla, sed suscipit ex. Vivamus iaculis, felis eget varius dignissim, justo nunc mattis felis, vel efficitur sapien turpis non est. ";
 
         var sentences = new List<string>();
         var delimiters = new[] { ".", "!", "?" };
@@ -201,9 +202,10 @@ class Receive
         {
             var messageBytes = Encoding.UTF8.GetBytes(item);
             var eventData = new EventData(messageBytes);
+
             if (!eventBatch.TryAdd(eventData))
                 throw new InvalidOperationException($"Event {item} is too large for the batch; "
-                    + $"maximum batch size is {eventBatch.MaximumSizeInBytes} bytes, current batch size is {eventBatch.SizeInBytes} bytes and message size is {messageBytes.Length} bytes.");
+                                                    + $"maximum batch size is {eventBatch.MaximumSizeInBytes} bytes, current batch size is {eventBatch.SizeInBytes} bytes and message size is {messageBytes.Length} bytes.");
         }
 
         try
@@ -263,14 +265,15 @@ class Receive
     {
         try
         {
-            var resourceUri = @$"https://eh-task-development.servicebus.windows.net";
+            var resourceUri = @$"https://eh-task-development.servicebus.windows.net/the-hub";
 
             TimeSpan sinceEpoch = DateTime.UtcNow - new DateTime(1970, 1, 1);
             var expiry = Convert.ToString((int)sinceEpoch.TotalSeconds + 120); // 2 minutes expiration
             string stringToSign = HttpUtility.UrlEncode(resourceUri) + "\n" + expiry;
             HMACSHA256 hmac = new(Encoding.UTF8.GetBytes(_eventhubKey));
             var signature = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(stringToSign)));
-            var sasToken = $"SharedAccessSignature sr={HttpUtility.UrlEncode(resourceUri)}&sig={HttpUtility.UrlEncode(signature)}&se={expiry}&skn=Listen";
+            var sasToken = $"SharedAccessSignature sr={HttpUtility.UrlEncode(resourceUri)}&sig={HttpUtility.UrlEncode(signature)}&se={expiry}&skn=SendReceive";
+
             return sasToken;
         }
         catch (Exception ex)
