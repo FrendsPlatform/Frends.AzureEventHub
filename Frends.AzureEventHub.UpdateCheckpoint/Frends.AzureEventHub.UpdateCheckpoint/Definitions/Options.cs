@@ -10,10 +10,16 @@ namespace Frends.AzureEventHub.UpdateCheckpoint.Definitions;
 public class Options
 {
     /// <summary>
-    /// Whether to fail if a specified partition checkpoint does not exist. Default is false.
+    /// Controls behavior when a specified partition checkpoint does not exist.
+    /// If true, the operation fails when a partition is missing.
+    /// If false, the partition is skipped and recorded as an error, and processing continues.
+    /// When partitions are skipped, the operation is considered unsuccessful; it either
+    /// throws or returns a failure result depending on ThrowErrorOnFailure.
+    /// This operation is not transactional; updates applied before a failure are not reverted.
     /// </summary>
-    /// <example>true</example>
-    public bool FailIfPartitionMissing { get; set; }
+    /// <example>false</example>
+    [DefaultValue(false)]
+    public bool FailIfPartitionMissing { get; set; } = false;
 
     /// <summary>
     /// True: Throw an exception.

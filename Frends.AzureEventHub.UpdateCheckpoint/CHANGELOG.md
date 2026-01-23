@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.0] - 2026-01-22
+
+### Changed
+
+- Set FailIfPartitionMissing default to false and clarified its documentation, including how skipped partitions are treated and how it interacts with ThrowErrorOnFailure
+
 ## [1.2.0] - 2026-01-16
 
 ### Changed
