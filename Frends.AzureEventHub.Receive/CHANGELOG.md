@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.7.0] - 2026-04-26
+
+### Fixed
+
+- Resolve the problem with short delays between checks 
+
 ## [2.6.0] - 2026-01-16
 
 ### Changed

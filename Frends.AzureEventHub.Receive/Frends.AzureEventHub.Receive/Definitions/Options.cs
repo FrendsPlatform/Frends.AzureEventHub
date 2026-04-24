@@ -8,7 +8,7 @@ namespace Frends.AzureEventHub.Receive.Definitions;
 public class Options
 {
     /// <summary>
-    /// Determines how exceptions are handled during Task execution. 
+    /// Determines how exceptions are handled during Task execution.
     /// Setting this to ExceptionHandlers.Info will log the exception message to Result.Errors and attempt to continue the Task execution, if possible.
     /// </summary>
     /// <example>ExceptionHandlers.Info</example>
@@ -17,14 +17,15 @@ public class Options
 
     /// <summary>
     /// Specifies the delay (in seconds) between each attempt to consume data.
+    /// NOTE: Must be at least 0.1
     /// </summary>
     /// <example>1, 0.5</example>
     [DefaultValue(1)]
     public double ConsumeAttemptDelay { get; set; }
 
     /// <summary>
-    /// Sets the maximum duration (in seconds) for the Task to run. 
-    /// If set to 0, the Task can run indefinitely. 
+    /// Sets the maximum duration (in seconds) for the Task to run.
+    /// If set to 0, the Task can run indefinitely.
     /// Note that both MaxRunTime and MaxEvents cannot be set to unlimited.
     /// </summary>
     /// <example>0, 10, 1.5</example>
@@ -32,8 +33,8 @@ public class Options
     public double MaxRunTime { get; set; }
 
     /// <summary>
-    /// Defines the maximum number of events to be received before ending the Task. 
-    /// If set to 0, the Task can receive an unlimited number of events. 
+    /// Defines the maximum number of events to be received before ending the Task.
+    /// If set to 0, the Task can receive an unlimited number of events.
     /// Note that both MaxRunTime and MaxEvents cannot be set to unlimited.
     /// </summary>
     /// <example>0, 5</example>

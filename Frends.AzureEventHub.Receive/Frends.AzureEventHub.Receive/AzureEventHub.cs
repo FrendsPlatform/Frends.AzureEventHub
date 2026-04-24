@@ -34,7 +34,10 @@ public static class AzureEventHub
         if (options.MaxEvents.Equals(0) && options.MaxRunTime.Equals(0))
             throw new Exception("Both Options.MaxEvents and Options.MaxRunTime cannot be unlimited.");
         if (options.MaxRunTime > 0 && consumer.MaximumWaitTime > options.MaxRunTime)
-            throw new Exception("Consumer.MaximumWaitTime cannot exceed Options.MaxRunTime when Options.MaxRunTime is greater than 0.");
+            throw new Exception(
+                "Consumer.MaximumWaitTime cannot exceed Options.MaxRunTime when Options.MaxRunTime is greater than 0.");
+        if (options.ConsumeAttemptDelay < 0.1)
+            throw new Exception("Options.ConsumeAttemptDelay must be at least 0.1 seconds.");
 
         var results = new ConcurrentBag<dynamic>();
         var errors = new ConcurrentBag<dynamic>();
@@ -52,7 +55,7 @@ public static class AzureEventHub
                 await args.UpdateCheckpointAsync(cancellationToken);
                 lastEventTime = DateTime.UtcNow;
 
-                if (options.MaxRunTime > 0 && timeOut <= DateTime.UtcNow || options.MaxEvents > 0 && results.Count >= options.MaxEvents)
+                if (options.MaxEvents > 0 && results.Count >= options.MaxEvents)
                     stopProcessing = true;
             }
         }
@@ -82,7 +85,10 @@ public static class AzureEventHub
 
             while (!stopProcessing)
             {
-                if (maximumWaitTime.HasValue && DateTime.UtcNow - lastEventTime >= maximumWaitTime.Value)
+                if ((options.MaxRunTime > 0 && timeOut <= DateTime.UtcNow) ||
+                    (maximumWaitTime.HasValue &&
+                     DateTime.UtcNow - lastEventTime >=
+                     maximumWaitTime.Value))
                 {
                     stopProcessing = true;
                     break;
