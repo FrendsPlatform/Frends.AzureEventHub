@@ -62,9 +62,18 @@ public static class AzureEventHub
         }
         catch (Exception ex)
         {
-            return new Result(
-                false,
-                $"An error occurred while publishing events: {ex.Message}");
+            if (options.ThrowErrorOnFailure)
+            {
+                if (string.IsNullOrEmpty(options.ErrorMessageOnFailure))
+                    throw new Exception(ex.Message, ex);
+                throw new Exception(options.ErrorMessageOnFailure, ex);
+            }
+
+            var errorMessage = string.IsNullOrEmpty(options.ErrorMessageOnFailure)
+                ? ex.Message
+                : $"{options.ErrorMessageOnFailure}: {ex.Message}";
+
+            return new Result(false, new Error { Message = errorMessage, AdditionalInfo = ex });
         }
         finally
         {

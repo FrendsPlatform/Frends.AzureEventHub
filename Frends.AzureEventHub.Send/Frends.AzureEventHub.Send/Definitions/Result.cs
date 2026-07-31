@@ -17,9 +17,21 @@ public class Result
     /// <example>A batch of 5 events has been published.</example>
     public string Message { get; private set; }
 
+    /// <summary>
+    /// Error information when Success is false and ThrowErrorOnFailure is set to false.
+    /// </summary>
+    /// <example>null</example>
+    public Error Error { get; private set; }
+
     internal Result(bool success, string message)
     {
         Success = success;
         Message = message;
+    }
+
+    internal Result(bool success, Error error)
+    {
+        Success = success;
+        Error = error;
     }
 }
