@@ -1,6 +1,7 @@
 ﻿using Azure.Messaging.EventHubs;
 using Azure.Messaging.EventHubs.Producer;
 using Frends.AzureEventHub.Send.Definitions;
+using Frends.AzureEventHub.Send.Helpers;
 using System;
 using System.ComponentModel;
 using System.Text;
@@ -62,18 +63,7 @@ public static class AzureEventHub
         }
         catch (Exception ex)
         {
-            if (options.ThrowErrorOnFailure)
-            {
-                if (string.IsNullOrEmpty(options.ErrorMessageOnFailure))
-                    throw new Exception(ex.Message, ex);
-                throw new Exception(options.ErrorMessageOnFailure, ex);
-            }
-
-            var errorMessage = string.IsNullOrEmpty(options.ErrorMessageOnFailure)
-                ? ex.Message
-                : $"{options.ErrorMessageOnFailure}: {ex.Message}";
-
-            return new Result(false, new Error { Message = errorMessage, AdditionalInfo = ex });
+            return ex.Handle(options);
         }
         finally
         {
