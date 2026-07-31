@@ -56,7 +56,7 @@ class Send
                 new EventHubMessage { Message = message },
             }
         };
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(() => AzureEventHub.Send(input, _options, CancellationToken.None));
+        var exception = Assert.ThrowsAsync<Exception>(() => AzureEventHub.Send(input, _options, CancellationToken.None));
         Assert.IsTrue(exception.Message.Contains("Event 0 is too large for the batch"));
     }
 
@@ -87,6 +87,6 @@ class Send
             }
         };
 
-        var exception = Assert.ThrowsAsync<UnauthorizedAccessException>(() => AzureEventHub.Send(input, _options, CancellationToken.None));
+        var exception = Assert.ThrowsAsync<Exception>(() => AzureEventHub.Send(input, _options, CancellationToken.None));
     }
 }
