@@ -41,7 +41,11 @@ public static class AzureEventHub
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    return new Result(false, "Task was cancelled.");
+                    return new Result
+                    {
+                        Success = false,
+                        Message = "Task was cancelled.",
+                    };
                 }
 
                 var messageBytes = Encoding.UTF8.GetBytes(input.Messages[i].Message);
@@ -57,9 +61,11 @@ public static class AzureEventHub
 
             // Use the producer client to send the batch of events to the event hub
             await producerClient.SendAsync(eventBatch, cancellationToken);
-            return new Result(
-                true,
-                $"A batch of {input.Messages.Length} events has been published.");
+            return new Result
+            {
+                Success = true,
+                Message = $"A batch of {input.Messages.Length} events has been published.",
+            };
         }
         catch (Exception ex)
         {
