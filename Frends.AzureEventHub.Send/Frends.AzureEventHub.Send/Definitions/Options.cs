@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using Azure.Messaging.EventHubs;
 
 namespace Frends.AzureEventHub.Send.Definitions;
@@ -47,7 +48,23 @@ public class Options
     /// <summary>
     /// The transport type to use.
     /// </summary>
+    /// <example>AmqpTcp</example>
     public TransportType TransportType { get; set; } = TransportType.AmqpTcp;
+
+    /// <summary>
+    /// Throw an exception if the Task fails. If set to false, the Task returns a Result with Success set to false and the Error property populated.
+    /// </summary>
+    /// <example>true</example>
+    [DefaultValue(true)]
+    public bool ThrowErrorOnFailure { get; set; } = true;
+
+    /// <summary>
+    /// Optional custom error message to include when ThrowErrorOnFailure is true or when returning an error Result.
+    /// </summary>
+    /// <example>Event Hub send failed.</example>
+    [DisplayFormat(DataFormatString = "Text")]
+    [DefaultValue("")]
+    public string ErrorMessageOnFailure { get; set; } = string.Empty;
 
     // Do not make this into a property, Frends UI shows internal properties for some reason
     internal EventHubsRetryMode GetNativeClientRetryMode()

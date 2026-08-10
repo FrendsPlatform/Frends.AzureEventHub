@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.0] - 2026-07-31
+
+### Added
+
+- Added `ThrowErrorOnFailure` option: when set to `true` (default), the Task throws an exception on failure; when `false`, it returns a result with the `Error` property populated instead of throwing.
+- Added `ErrorMessageOnFailure` option: an optional custom message to include in the error when the Task fails.
+- Added `Error` property to the result, containing error details when the Task fails and `ThrowErrorOnFailure` is set to `false`.
+
+### Changed
+
+- Upgraded target framework from .NET 6 to .NET 8.
+
 ## [1.3.0] - 2026-01-16
 
 ### Changed

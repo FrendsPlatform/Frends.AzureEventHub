@@ -1,6 +1,7 @@
 ﻿using Azure.Messaging.EventHubs;
 using Azure.Messaging.EventHubs.Producer;
 using Frends.AzureEventHub.Send.Definitions;
+using Frends.AzureEventHub.Send.Helpers;
 using System;
 using System.ComponentModel;
 using System.Text;
@@ -31,40 +32,44 @@ public static class AzureEventHub
             input.ConnectionString,
             eventHubProducerClientOptions);
 
-        // Create a batch of events
-        using EventDataBatch eventBatch = await producerClient.CreateBatchAsync();
-
-        for (int i = 0; i < input.Messages.Length; i++)
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return new Result(false, "Task was cancelled.");
-            }
-
-            var messageBytes = Encoding.UTF8.GetBytes(input.Messages[i].Message);
-            var eventData = new EventData(messageBytes);
-            if (!eventBatch.TryAdd(eventData))
-            {
-                // if it is too large for the batch
-                throw new InvalidOperationException(
-                    $"Event {i} is too large for the batch; " +
-                    $"maximum batch size is {eventBatch.MaximumSizeInBytes} bytes, current batch size is {eventBatch.SizeInBytes} bytes and message size is {messageBytes.Length} bytes.");
-            }
-        }
-
         try
         {
+            // Create a batch of events
+            using EventDataBatch eventBatch = await producerClient.CreateBatchAsync(cancellationToken);
+
+            for (int i = 0; i < input.Messages.Length; i++)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return new Result
+                    {
+                        Success = false,
+                        Message = "Task was cancelled.",
+                    };
+                }
+
+                var messageBytes = Encoding.UTF8.GetBytes(input.Messages[i].Message);
+                var eventData = new EventData(messageBytes);
+                if (!eventBatch.TryAdd(eventData))
+                {
+                    // if it is too large for the batch
+                    throw new InvalidOperationException(
+                        $"Event {i} is too large for the batch; " +
+                        $"maximum batch size is {eventBatch.MaximumSizeInBytes} bytes, current batch size is {eventBatch.SizeInBytes} bytes and message size is {messageBytes.Length} bytes.");
+                }
+            }
+
             // Use the producer client to send the batch of events to the event hub
             await producerClient.SendAsync(eventBatch, cancellationToken);
-            return new Result(
-                true,
-                $"A batch of {input.Messages.Length} events has been published.");
+            return new Result
+            {
+                Success = true,
+                Message = $"A batch of {input.Messages.Length} events has been published.",
+            };
         }
         catch (Exception ex)
         {
-            return new Result(
-                false,
-                $"An error occurred while publishing events: {ex.Message}");
+            return ex.Handle(options);
         }
         finally
         {
