@@ -21,6 +21,7 @@ public static class AzureEventHub
     /// Task to update checkpoints in an Azure Storage container for a specified Event Hub consumer group.
     /// Supports selective partition checkpointing and rollback by a specified number of events.
     /// Compatible with connection string, SAS token, and OAuth authentication methods.
+    /// [Documentation](https://tasks.frends.com/tasks/frends-tasks/Frends.AzureEventHub.UpdateCheckpoint)
     /// </summary>
     /// <param name="input">Event Hub name, consumer group, partition, and rollback details.</param>
     /// <param name="connection">Storage and authentication configuration.</param>

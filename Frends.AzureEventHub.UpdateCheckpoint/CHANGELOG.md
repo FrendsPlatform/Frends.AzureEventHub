@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.4.0] - 2026-08-13
+
+### Changed
+
+- Added documentation link and error property to comply with Frends task standards.
+
 ## [1.3.0] - 2026-01-22
 
 ### Changed
