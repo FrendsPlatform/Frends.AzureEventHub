@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace Frends.AzureEventHub.Receive.Definitions;
 
@@ -40,4 +41,21 @@ public class Options
     /// <example>0, 5</example>
     [DefaultValue(0)]
     public int MaxEvents { get; set; }
+
+    /// <summary>
+    /// If true, an exception is thrown on failure. If false, the error is returned in Result.Error.
+    /// </summary>
+    /// <example>true</example>
+    [DefaultValue(true)]
+    public bool ThrowErrorOnFailure { get; set; } = true;
+
+    /// <summary>
+    /// Optional custom error message to use when ThrowErrorOnFailure is true or when returning a failed Result.
+    /// If left empty, the original exception message is used.
+    /// </summary>
+    /// <example></example>
+    [DisplayFormat(DataFormatString = "Text")]
+    [DefaultValue("")]
+    public string ErrorMessageOnFailure { get; set; } = string.Empty;
 }
+

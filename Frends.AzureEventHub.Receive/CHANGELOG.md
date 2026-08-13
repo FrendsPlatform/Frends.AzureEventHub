@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0] - 2026-08-13
+
+### Changed
+
+- Upgraded target framework from net6.0 to net8.0.
+- The `Consumer` and `Checkpoint` parameter groups have been replaced with `Input` and `Connection` to align with Frends task standards.
+  - `Input` contains consumer group name and maximum wait time settings.
+  - `Connection` contains all authentication and connection details for both the Event Hub and the checkpoint blob storage.
+- Added `ThrowErrorOnFailure` and `ErrorMessageOnFailure` options to the `Options` parameter, allowing you to control whether errors are thrown as exceptions or returned as a failed result.
+- The result now includes an `Error` property with error message and exception details when the task fails and `ThrowErrorOnFailure` is set to false.
+
 ## [2.7.0] - 2026-04-26
 
 ### Fixed
