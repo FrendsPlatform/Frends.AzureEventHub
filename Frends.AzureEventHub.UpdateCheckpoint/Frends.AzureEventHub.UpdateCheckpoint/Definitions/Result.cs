@@ -38,4 +38,11 @@ public class Result
     /// </summary>
     /// <example>[ { "PartitionId": "2", "Error": "Checkpoint not found." } ]</example>
     public Error[] Errors { get; set; }
+
+    /// <summary>
+    /// Top-level error information when the overall task fails and ThrowErrorOnFailure is set to false.
+    /// For per-partition errors, see the Errors array.
+    /// </summary>
+    /// <example>null</example>
+    public Error Error { get; set; }
 }
