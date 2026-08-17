@@ -130,7 +130,7 @@ class Receive
     {
         _input.CreateContainer = false;
         _options.ExceptionHandler = ExceptionHandlers.Throw;
-        var result = Assert.ThrowsAsync<AggregateException>(async () => await AzureEventHub.Receive(_input, _connection, _options, default));
+        var result = Assert.ThrowsAsync<Exception>(async () => await AzureEventHub.Receive(_input, _connection, _options, default));
         Assert.IsTrue(result.Message.ToString().Contains("The specified container does not exist"));
     }
 

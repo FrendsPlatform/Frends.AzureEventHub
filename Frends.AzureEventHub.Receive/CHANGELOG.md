@@ -4,7 +4,7 @@
 
 ### Changed
 
-- [Breaking Change]The `Consumer` and `Checkpoint` parameter groups have been replaced with `Input` and `Connection` to align with Frends task standards:
+- [Breaking Change] The `Consumer` and `Checkpoint` parameter groups have been replaced with `Input` and `Connection` to align with Frends task standards:
   - Input contains operational parameters:
     - Consumer.EventHubName → Input.EventHubName
     - Consumer.ConsumerGroup → Input.ConsumerGroup
