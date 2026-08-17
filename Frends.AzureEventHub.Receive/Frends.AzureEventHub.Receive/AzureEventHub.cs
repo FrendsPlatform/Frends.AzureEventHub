@@ -72,9 +72,9 @@ public static class AzureEventHub
 
         try
         {
-            var checkpointStorageClient = CreateBlobContainerClient(connection);
+            var checkpointStorageClient = CreateBlobContainerClient(input, connection);
 
-            if (connection.CreateContainer && connection.StorageAuthenticationMethod is not AuthenticationMethod.SASToken)
+            if (input.CreateContainer && connection.StorageAuthenticationMethod is not AuthenticationMethod.SASToken)
                 await checkpointStorageClient.CreateIfNotExistsAsync(PublicAccessType.None, null, null, cancellationToken);
 
             processorClient = CreateEventProcessorClient(input, connection, checkpointStorageClient);
@@ -118,11 +118,11 @@ public static class AzureEventHub
         return new Result(true, results, errors);
     }
 
-    private static BlobContainerClient CreateBlobContainerClient(Connection connection)
+    private static BlobContainerClient CreateBlobContainerClient(Input input, Connection connection)
     {
         return connection.StorageAuthenticationMethod switch
         {
-            AuthenticationMethod.ConnectionString => new(connection.StorageConnectionString, connection.ContainerName),
+            AuthenticationMethod.ConnectionString => new(connection.StorageConnectionString, input.ContainerName),
             AuthenticationMethod.SASToken => new(new Uri(connection.BlobContainerUri), new AzureSasCredential(connection.StorageSASToken)),
             AuthenticationMethod.OAuth2 => new(new Uri(connection.BlobContainerUri), new ClientSecretCredential(connection.StorageTenantId, connection.StorageClientId, connection.StorageClientSecret)),
             _ => throw new Exception("Authentication method not supported."),
@@ -141,14 +141,14 @@ public static class AzureEventHub
         switch (connection.EventHubAuthenticationMethod)
         {
             case AuthenticationMethod.ConnectionString:
-                if (!string.IsNullOrWhiteSpace(connection.EventHubName))
-                    return new(checkpointStorageClient, consumerGroup, connection.EventHubConnectionString, connection.EventHubName, eventProcessorClientOptions);
+                if (!string.IsNullOrWhiteSpace(input.EventHubName))
+                    return new(checkpointStorageClient, consumerGroup, connection.EventHubConnectionString, input.EventHubName, eventProcessorClientOptions);
                 else
                     return new(checkpointStorageClient, consumerGroup, connection.EventHubConnectionString, eventProcessorClientOptions);
             case AuthenticationMethod.SASToken:
-                return new(checkpointStorageClient, consumerGroup, connection.EventHubNamespace, connection.EventHubName, new AzureSasCredential(connection.EventHubSASToken), eventProcessorClientOptions);
+                return new(checkpointStorageClient, consumerGroup, connection.EventHubNamespace, input.EventHubName, new AzureSasCredential(connection.EventHubSASToken), eventProcessorClientOptions);
             case AuthenticationMethod.OAuth2:
-                return new(checkpointStorageClient, consumerGroup, connection.EventHubNamespace, connection.EventHubName, new ClientSecretCredential(connection.EventHubTenantId, connection.EventHubClientId, connection.EventHubClientSecret), eventProcessorClientOptions);
+                return new(checkpointStorageClient, consumerGroup, connection.EventHubNamespace, input.EventHubName, new ClientSecretCredential(connection.EventHubTenantId, connection.EventHubClientId, connection.EventHubClientSecret), eventProcessorClientOptions);
             default:
                 throw new Exception("AuthenticationMethod not supported.");
         }

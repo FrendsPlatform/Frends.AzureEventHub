@@ -44,13 +44,15 @@ class Receive
         {
             MaximumWaitTime = 10,
             ConsumerGroup = default,
+            EventHubName = "the-hub",
+            ContainerName = _containerName,
+            CreateContainer = true,
         };
 
         _connection = new Connection
         {
             EventHubAuthenticationMethod = AuthenticationMethod.ConnectionString,
             EventHubConnectionString = _eventHubConnectionString,
-            EventHubName = "the-hub",
             EventHubClientId = _appID,
             EventHubClientSecret = _clientSecret,
             EventHubNamespace = _namespace,
@@ -58,11 +60,9 @@ class Receive
             EventHubSASToken = default,
             StorageAuthenticationMethod = AuthenticationMethod.ConnectionString,
             StorageConnectionString = _blobStorageConnectionString,
-            ContainerName = _containerName,
             StorageClientId = _appID,
             StorageClientSecret = _clientSecret,
             StorageTenantId = _tenantID,
-            CreateContainer = true,
             StorageSASToken = default,
             BlobContainerUri = default,
         };
@@ -128,7 +128,7 @@ class Receive
     [Test]
     public void ReceiveEvents_CreateContainerFalse_Throw()
     {
-        _connection.CreateContainer = false;
+        _input.CreateContainer = false;
         _options.ExceptionHandler = ExceptionHandlers.Throw;
         var result = Assert.ThrowsAsync<AggregateException>(async () => await AzureEventHub.Receive(_input, _connection, _options, default));
         Assert.IsTrue(result.Message.ToString().Contains("The specified container does not exist"));
@@ -137,7 +137,7 @@ class Receive
     [Test]
     public async Task ReceiveEvents_CreateContainerFalse_Info()
     {
-        _connection.CreateContainer = false;
+        _input.CreateContainer = false;
         var result = await AzureEventHub.Receive(_input, _connection, _options, default);
         Assert.IsFalse(result.Success);
         Assert.AreEqual(0, result.Data.Count);

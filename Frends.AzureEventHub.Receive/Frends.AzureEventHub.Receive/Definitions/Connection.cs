@@ -19,12 +19,6 @@ public class Connection
     public AuthenticationMethod EventHubAuthenticationMethod { get; set; }
 
     /// <summary>
-    /// Specifies the name of the Event Hub to connect to.
-    /// </summary>
-    /// <example>ExampleHub</example>
-    public string EventHubName { get; set; }
-
-    /// <summary>
     /// Specifies the connection string for the Event Hub.
     /// Required when using AuthenticationMethod.ConnectionString.
     /// </summary>
@@ -86,22 +80,6 @@ public class Connection
     /// <example>AuthenticationMethod.ConnectionString</example>
     [DefaultValue(AuthenticationMethod.ConnectionString)]
     public AuthenticationMethod StorageAuthenticationMethod { get; set; }
-
-    /// <summary>
-    /// The name of the blob container used for checkpointing.
-    /// </summary>
-    /// <example>examplecontainer</example>
-    [DisplayFormat(DataFormatString = "Text")]
-    [UIHint(nameof(StorageAuthenticationMethod), "", AuthenticationMethod.ConnectionString)]
-    public string ContainerName { get; set; }
-
-    /// <summary>
-    /// If true, a new container is created under the specified account if it does not exist.
-    /// Not supported when using SAS Token as an authentication method.
-    /// </summary>
-    /// <example>false</example>
-    [DefaultValue(false)]
-    public bool CreateContainer { get; set; }
 
     /// <summary>
     /// A connection string for the checkpoint blob storage.
