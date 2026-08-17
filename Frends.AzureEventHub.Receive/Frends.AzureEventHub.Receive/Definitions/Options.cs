@@ -53,9 +53,8 @@ public class Options
     /// Optional custom error message to use when ThrowErrorOnFailure is true or when returning a failed Result.
     /// If left empty, the original exception message is used.
     /// </summary>
-    /// <example></example>
+    /// <example>Custom error message</example>
     [DisplayFormat(DataFormatString = "Text")]
     [DefaultValue("")]
     public string ErrorMessageOnFailure { get; set; } = string.Empty;
 }
-

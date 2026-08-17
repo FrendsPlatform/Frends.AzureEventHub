@@ -31,7 +31,7 @@ public class Result
     /// <summary>
     /// Contains error details when the Task fails and Options.ThrowErrorOnFailure is false.
     /// </summary>
-    /// <example>null</example>
+    /// <example>object { string Message = "Failed to receive events from Event Hub.", Exception AdditionalInfo }</example>
     public Error Error { get; internal set; }
 
     internal Result(bool success, ConcurrentBag<dynamic> data, ConcurrentBag<dynamic> errors)
@@ -40,20 +40,4 @@ public class Result
         Data = data.ToList();
         Errors = errors.ToList();
     }
-}
-
-/// <summary>
-/// Error details.
-/// </summary>
-public class Error
-{
-    /// <summary>
-    /// The error message.
-    /// </summary>
-    public string Message { get; internal set; }
-
-    /// <summary>
-    /// Additional information about the error (the original exception).
-    /// </summary>
-    public Exception AdditionalInfo { get; internal set; }
 }

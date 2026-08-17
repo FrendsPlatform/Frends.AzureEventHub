@@ -1,15 +1,34 @@
-# Changelog
+﻿# Changelog
 
 ## [3.0.0] - 2026-08-13
 
 ### Changed
 
-- Upgraded target framework from net6.0 to net8.0.
-- The `Consumer` and `Checkpoint` parameter groups have been replaced with `Input` and `Connection` to align with Frends task standards.
-  - `Input` contains consumer group name and maximum wait time settings.
-  - `Connection` contains all authentication and connection details for both the Event Hub and the checkpoint blob storage.
+- [Breaking Change]The `Consumer` and `Checkpoint` parameter groups have been replaced with `Input` and `Connection` to align with Frends task standards:
+  - Input contains operational parameters:
+    - Consumer.EventHubName → Input.EventHubName
+    - Consumer.ConsumerGroup → Input.ConsumerGroup
+    - Consumer.MaximumWaitTime → Input.MaximumWaitTime
+    - Checkpoint.ContainerName → Input.ContainerName
+    - Checkpoint.CreateContainer → Input.CreateContainer
+  - Connection contains all authentication and connection details for both the Event Hub and the checkpoint blob storage:
+    - Consumer.AuthenticationMethod → Connection.EventHubAuthenticationMethod
+    - Consumer.ConnectionString → Connection.EventHubConnectionString
+    - Consumer.Namespace → Connection.EventHubNamespace
+    - Consumer.SASToken → Connection.EventHubSASToken
+    - Consumer.TenantId → Connection.EventHubTenantId
+    - Consumer.ClientId → Connection.EventHubClientId
+    - Consumer.ClientSecret → Connection.EventHubClientSecret
+    - Checkpoint.AuthenticationMethod → Connection.StorageAuthenticationMethod
+    - Checkpoint.ConnectionString → Connection.StorageConnectionString
+    - Checkpoint.BlobContainerUri → Connection.BlobContainerUri
+    - Checkpoint.SASToken → Connection.StorageSASToken
+    - Checkpoint.TenantId → Connection.StorageTenantId
+    - Checkpoint.ClientId → Connection.StorageClientId
+    - Checkpoint.ClientSecret → Connection.StorageClientSecret
 - Added `ThrowErrorOnFailure` and `ErrorMessageOnFailure` options to the `Options` parameter, allowing you to control whether errors are thrown as exceptions or returned as a failed result.
 - The result now includes an `Error` property with error message and exception details when the task fails and `ThrowErrorOnFailure` is set to false.
+- Upgraded target framework from net6.0 to net8.0.
 
 ## [2.7.0] - 2026-04-26
 
