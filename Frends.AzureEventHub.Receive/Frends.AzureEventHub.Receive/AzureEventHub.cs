@@ -5,6 +5,7 @@ using Azure.Messaging.EventHubs.Consumer;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Frends.AzureEventHub.Receive.Definitions;
+using Frends.AzureEventHub.Receive.Helpers;
 using System;
 using System.Collections.Concurrent;
 using System.ComponentModel;
@@ -24,18 +25,18 @@ public static class AzureEventHub
     /// Receive events from Azure Event Hub.
     /// [Documentation](https://tasks.frends.com/tasks/frends-tasks/Frends.AzureEventHub.Receive)
     /// </summary>
-    /// <param name="consumer">Consumer parameters.</param>
-    /// <param name="checkpoint">Checkpoint parameters.</param>
+    /// <param name="input">Input parameters.</param>
+    /// <param name="connection">Connection parameters.</param>
     /// <param name="options">Optional parameters.</param>
     /// <param name="cancellationToken">Token received from Frends to cancel this Task.</param>
-    /// <returns>Object { bool Success, List&lt;dynamic&gt; Data, List&lt;dynamic&gt; Errors }</returns>
-    public static async Task<Result> Receive([PropertyTab] Consumer consumer, [PropertyTab] Checkpoint checkpoint, [PropertyTab] Options options, CancellationToken cancellationToken)
+    /// <returns>Object { bool Success, List&lt;dynamic&gt; Data, List&lt;dynamic&gt; Errors, Error Error }</returns>
+    public static async Task<Result> Receive([PropertyTab] Input input, [PropertyTab] Connection connection, [PropertyTab] Options options, CancellationToken cancellationToken)
     {
         if (options.MaxEvents.Equals(0) && options.MaxRunTime.Equals(0))
             throw new Exception("Both Options.MaxEvents and Options.MaxRunTime cannot be unlimited.");
-        if (options.MaxRunTime > 0 && consumer.MaximumWaitTime > options.MaxRunTime)
+        if (options.MaxRunTime > 0 && input.MaximumWaitTime > options.MaxRunTime)
             throw new Exception(
-                "Consumer.MaximumWaitTime cannot exceed Options.MaxRunTime when Options.MaxRunTime is greater than 0.");
+                "Input.MaximumWaitTime cannot exceed Options.MaxRunTime when Options.MaxRunTime is greater than 0.");
         if (options.ConsumeAttemptDelay < 0.1)
             throw new Exception("Options.ConsumeAttemptDelay must be at least 0.1 seconds.");
 
@@ -44,7 +45,7 @@ public static class AzureEventHub
         var stopProcessing = false;
         EventProcessorClient processorClient = null;
         var timeOut = options.MaxRunTime > 0 ? DateTime.UtcNow.AddSeconds(options.MaxRunTime) : DateTime.UtcNow;
-        var maximumWaitTime = consumer.MaximumWaitTime > 0 ? TimeSpan.FromSeconds(consumer.MaximumWaitTime) : (TimeSpan?)null;
+        var maximumWaitTime = input.MaximumWaitTime > 0 ? TimeSpan.FromSeconds(input.MaximumWaitTime) : (TimeSpan?)null;
         var lastEventTime = DateTime.UtcNow;
 
         async Task ProcessEventHandler(ProcessEventArgs args)
@@ -71,12 +72,12 @@ public static class AzureEventHub
 
         try
         {
-            var checkpointStorageClient = CreateBlobContainerClient(checkpoint);
+            var checkpointStorageClient = CreateBlobContainerClient(input, connection);
 
-            if (checkpoint.CreateContainer && checkpoint.AuthenticationMethod is not AuthenticationMethod.SASToken)
+            if (input.CreateContainer && connection.StorageAuthenticationMethod is not AuthenticationMethod.SASToken)
                 await checkpointStorageClient.CreateIfNotExistsAsync(PublicAccessType.None, null, null, cancellationToken);
 
-            processorClient = CreateEventProcessorClient(consumer, checkpointStorageClient);
+            processorClient = CreateEventProcessorClient(input, connection, checkpointStorageClient);
 
             processorClient.ProcessEventAsync += ProcessEventHandler;
             processorClient.ProcessErrorAsync += ProcessErrorHandler;
@@ -99,7 +100,7 @@ public static class AzureEventHub
         catch (Exception ex)
         {
             if (options.ExceptionHandler == ExceptionHandlers.Throw)
-                throw;
+                return ex.Handle(options);
 
             errors.Add($"An exception occurred: {ex}");
             return new Result(false, results, errors);
@@ -117,39 +118,40 @@ public static class AzureEventHub
         return new Result(true, results, errors);
     }
 
-    private static BlobContainerClient CreateBlobContainerClient(Checkpoint checkpoint)
+    private static BlobContainerClient CreateBlobContainerClient(Input input, Connection connection)
     {
-        return checkpoint.AuthenticationMethod switch
+        return connection.StorageAuthenticationMethod switch
         {
-            AuthenticationMethod.ConnectionString => new(checkpoint.ConnectionString, checkpoint.ContainerName),
-            AuthenticationMethod.SASToken => new(new Uri(checkpoint.BlobContainerUri), new AzureSasCredential(checkpoint.SASToken)),
-            AuthenticationMethod.OAuth2 => new(new Uri(checkpoint.BlobContainerUri), new ClientSecretCredential(checkpoint.TenantId, checkpoint.ClientId, checkpoint.ClientSecret)),
+            AuthenticationMethod.ConnectionString => new(connection.StorageConnectionString, input.ContainerName),
+            AuthenticationMethod.SASToken => new(new Uri(connection.BlobContainerUri), new AzureSasCredential(connection.StorageSASToken)),
+            AuthenticationMethod.OAuth2 => new(new Uri(connection.BlobContainerUri), new ClientSecretCredential(connection.StorageTenantId, connection.StorageClientId, connection.StorageClientSecret)),
             _ => throw new Exception("Authentication method not supported."),
         };
     }
 
-    private static EventProcessorClient CreateEventProcessorClient(Consumer consumer, BlobContainerClient checkpointStorageClient)
+    private static EventProcessorClient CreateEventProcessorClient(Input input, Connection connection, BlobContainerClient checkpointStorageClient)
     {
-        var consumerGroup = !string.IsNullOrWhiteSpace(consumer.ConsumerGroup) ? consumer.ConsumerGroup : EventHubConsumerClient.DefaultConsumerGroupName;
+        var consumerGroup = !string.IsNullOrWhiteSpace(input.ConsumerGroup) ? input.ConsumerGroup : EventHubConsumerClient.DefaultConsumerGroupName;
 
         EventProcessorClientOptions eventProcessorClientOptions = new()
         {
-            MaximumWaitTime = consumer.MaximumWaitTime > 0 ? TimeSpan.FromSeconds(consumer.MaximumWaitTime) : null
+            MaximumWaitTime = input.MaximumWaitTime > 0 ? TimeSpan.FromSeconds(input.MaximumWaitTime) : null
         };
 
-        switch (consumer.AuthenticationMethod)
+        switch (connection.EventHubAuthenticationMethod)
         {
             case AuthenticationMethod.ConnectionString:
-                if (!string.IsNullOrWhiteSpace(consumer.EventHubName))
-                    return new(checkpointStorageClient, consumerGroup, consumer.ConnectionString, consumer.EventHubName, eventProcessorClientOptions);
+                if (!string.IsNullOrWhiteSpace(input.EventHubName))
+                    return new(checkpointStorageClient, consumerGroup, connection.EventHubConnectionString, input.EventHubName, eventProcessorClientOptions);
                 else
-                    return new(checkpointStorageClient, consumerGroup, consumer.ConnectionString, eventProcessorClientOptions);
+                    return new(checkpointStorageClient, consumerGroup, connection.EventHubConnectionString, eventProcessorClientOptions);
             case AuthenticationMethod.SASToken:
-                return new(checkpointStorageClient, consumerGroup, consumer.Namespace, consumer.EventHubName, new AzureSasCredential(consumer.SASToken), eventProcessorClientOptions);
+                return new(checkpointStorageClient, consumerGroup, connection.EventHubNamespace, input.EventHubName, new AzureSasCredential(connection.EventHubSASToken), eventProcessorClientOptions);
             case AuthenticationMethod.OAuth2:
-                return new(checkpointStorageClient, consumerGroup, consumer.Namespace, consumer.EventHubName, new ClientSecretCredential(consumer.TenantId, consumer.ClientId, consumer.ClientSecret), eventProcessorClientOptions);
+                return new(checkpointStorageClient, consumerGroup, connection.EventHubNamespace, input.EventHubName, new ClientSecretCredential(connection.EventHubTenantId, connection.EventHubClientId, connection.EventHubClientSecret), eventProcessorClientOptions);
             default:
                 throw new Exception("AuthenticationMethod not supported.");
         }
     }
 }
+

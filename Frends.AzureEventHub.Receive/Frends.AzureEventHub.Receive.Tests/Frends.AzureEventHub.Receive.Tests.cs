@@ -20,8 +20,8 @@ namespace Frends.AzureEventHub.Receive.Tests;
 [TestFixture]
 class Receive
 {
-    private static Consumer _consumer;
-    private static Checkpoint _checkpoint;
+    private static Input _input;
+    private static Connection _connection;
     private static Options _options;
     private readonly string _storageAccount = "stataskdevelopment";
     private static string _containerName;
@@ -40,30 +40,30 @@ class Receive
     {
         _containerName = "eventcontainer" + Guid.NewGuid().ToString();
 
-        _consumer = new Consumer
+        _input = new Input
         {
-            AuthenticationMethod = AuthenticationMethod.ConnectionString,
-            ConnectionString = _eventHubConnectionString,
-            EventHubName = "the-hub",
-            ClientId = _appID,
-            ClientSecret = _clientSecret,
-            Namespace = _namespace,
-            TenantId = _tenantID,
             MaximumWaitTime = 10,
-            SASToken = default,
             ConsumerGroup = default,
+            EventHubName = "the-hub",
+            ContainerName = _containerName,
+            CreateContainer = true,
         };
 
-        _checkpoint = new Checkpoint()
+        _connection = new Connection
         {
-            AuthenticationMethod = AuthenticationMethod.ConnectionString,
-            ConnectionString = _blobStorageConnectionString,
-            ContainerName = _containerName,
-            ClientId = _appID,
-            ClientSecret = _clientSecret,
-            TenantId = _tenantID,
-            CreateContainer = true,
-            SASToken = default,
+            EventHubAuthenticationMethod = AuthenticationMethod.ConnectionString,
+            EventHubConnectionString = _eventHubConnectionString,
+            EventHubClientId = _appID,
+            EventHubClientSecret = _clientSecret,
+            EventHubNamespace = _namespace,
+            EventHubTenantId = _tenantID,
+            EventHubSASToken = default,
+            StorageAuthenticationMethod = AuthenticationMethod.ConnectionString,
+            StorageConnectionString = _blobStorageConnectionString,
+            StorageClientId = _appID,
+            StorageClientSecret = _clientSecret,
+            StorageTenantId = _tenantID,
+            StorageSASToken = default,
             BlobContainerUri = default,
         };
 
@@ -90,9 +90,9 @@ class Receive
     public void ReceiveEvents_MaximumWaitTime_IsGreaterThan_MaxRunTime_Throw()
     {
         _options.MaxRunTime = 1;
-        _consumer.MaximumWaitTime = 2;
-        var result = Assert.ThrowsAsync<Exception>(async () => await AzureEventHub.Receive(_consumer, _checkpoint, _options, default));
-        Assert.AreEqual("Consumer.MaximumWaitTime cannot exceed Options.MaxRunTime when Options.MaxRunTime is greater than 0.", result.Message);
+        _input.MaximumWaitTime = 2;
+        var result = Assert.ThrowsAsync<Exception>(async () => await AzureEventHub.Receive(_input, _connection, _options, default));
+        Assert.AreEqual("Input.MaximumWaitTime cannot exceed Options.MaxRunTime when Options.MaxRunTime is greater than 0.", result.Message);
     }
 
     [Test]
@@ -101,24 +101,24 @@ class Receive
         _options.MaxRunTime = 0;
         _options.MaxEvents = 0;
         _options.ExceptionHandler = ExceptionHandlers.Throw;
-        var result = Assert.ThrowsAsync<Exception>(async () => await AzureEventHub.Receive(_consumer, _checkpoint, _options, default));
+        var result = Assert.ThrowsAsync<Exception>(async () => await AzureEventHub.Receive(_input, _connection, _options, default));
         Assert.AreEqual("Both Options.MaxEvents and Options.MaxRunTime cannot be unlimited.", result.Message);
     }
 
     [Test]
     public void ReceiveEvents_MissingConnectionString_Throw()
     {
-        _consumer.ConnectionString = "";
+        _connection.EventHubConnectionString = "";
         _options.ExceptionHandler = ExceptionHandlers.Throw;
-        var result = Assert.ThrowsAsync<ArgumentException>(async () => await AzureEventHub.Receive(_consumer, _checkpoint, _options, default));
+        var result = Assert.ThrowsAsync<Exception>(async () => await AzureEventHub.Receive(_input, _connection, _options, default));
         Assert.AreEqual("Value cannot be an empty string. (Parameter 'connectionString')", result.Message);
     }
 
     [Test]
     public async Task ReceiveEvents_MissingConnectionString_Info()
     {
-        _consumer.ConnectionString = "";
-        var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
+        _connection.EventHubConnectionString = "";
+        var result = await AzureEventHub.Receive(_input, _connection, _options, default);
         Assert.IsFalse(result.Success);
         Assert.AreEqual(0, result.Data.Count);
         Assert.AreEqual(1, result.Errors.Count);
@@ -128,17 +128,17 @@ class Receive
     [Test]
     public void ReceiveEvents_CreateContainerFalse_Throw()
     {
-        _checkpoint.CreateContainer = false;
+        _input.CreateContainer = false;
         _options.ExceptionHandler = ExceptionHandlers.Throw;
-        var result = Assert.ThrowsAsync<AggregateException>(async () => await AzureEventHub.Receive(_consumer, _checkpoint, _options, default));
+        var result = Assert.ThrowsAsync<Exception>(async () => await AzureEventHub.Receive(_input, _connection, _options, default));
         Assert.IsTrue(result.Message.ToString().Contains("The specified container does not exist"));
     }
 
     [Test]
     public async Task ReceiveEvents_CreateContainerFalse_Info()
     {
-        _checkpoint.CreateContainer = false;
-        var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
+        _input.CreateContainer = false;
+        var result = await AzureEventHub.Receive(_input, _connection, _options, default);
         Assert.IsFalse(result.Success);
         Assert.AreEqual(0, result.Data.Count);
         Assert.IsTrue(result.Errors.Count > 0);
@@ -148,7 +148,7 @@ class Receive
     [Test]
     public async Task ReceiveEvents_ConnectionString_Success()
     {
-        var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
+        var result = await AzureEventHub.Receive(_input, _connection, _options, default);
         Assert.IsTrue(result.Success);
         Assert.IsTrue(result.Data.Count > 0);
         Assert.AreEqual(0, result.Errors.Count);
@@ -158,9 +158,9 @@ class Receive
     [Test]
     public async Task ReceiveEvents_SASToken_Success()
     {
-        _consumer.AuthenticationMethod = AuthenticationMethod.SASToken;
-        _consumer.SASToken = GenerateSASToken_Hub();
-        var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
+        _connection.EventHubAuthenticationMethod = AuthenticationMethod.SASToken;
+        _connection.EventHubSASToken = GenerateSASToken_Hub();
+        var result = await AzureEventHub.Receive(_input, _connection, _options, default);
         Assert.IsTrue(result.Success);
         Assert.IsTrue(result.Data.Count > 0);
         Assert.AreEqual(0, result.Errors.Count);
@@ -171,10 +171,10 @@ class Receive
     [Ignore("Cannot tests OAuth at the moment")]
     public async Task ReceiveEvents_OAuth2_Success()
     {
-        _checkpoint.AuthenticationMethod = AuthenticationMethod.OAuth2;
-        _checkpoint.BlobContainerUri = CreateContainer();
+        _connection.StorageAuthenticationMethod = AuthenticationMethod.OAuth2;
+        _connection.BlobContainerUri = CreateContainer();
         _options.ConsumeAttemptDelay = 1;
-        var result = await AzureEventHub.Receive(_consumer, _checkpoint, _options, default);
+        var result = await AzureEventHub.Receive(_input, _connection, _options, default);
         await Task.Delay(10000);
         Assert.IsTrue(result.Success);
         Assert.AreEqual(0, result.Errors.Count);

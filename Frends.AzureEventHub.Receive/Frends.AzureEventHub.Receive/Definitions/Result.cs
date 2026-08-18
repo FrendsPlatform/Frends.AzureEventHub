@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -16,16 +17,22 @@ public class Result
     public bool Success { get; private set; }
 
     /// <summary>
-    /// Contains a list of events. 
+    /// Contains a list of events.
     /// </summary>
     /// <example>{ "foo", bar }</example>
     public List<dynamic> Data { get; private set; }
 
     /// <summary>
-    /// Contains a list of errors If Options.ExceptionHandlers is set to Throw.
+    /// Contains a list of errors if Options.ExceptionHandler is set to Info.
     /// </summary>
     /// <example>{ "An exception occured", "Another exception occured" }</example>
     public List<dynamic> Errors { get; private set; }
+
+    /// <summary>
+    /// Contains error details when the Task fails and Options.ThrowErrorOnFailure is false.
+    /// </summary>
+    /// <example>object { string Message = "Failed to receive events from Event Hub.", Exception AdditionalInfo }</example>
+    public Error Error { get; internal set; }
 
     internal Result(bool success, ConcurrentBag<dynamic> data, ConcurrentBag<dynamic> errors)
     {
