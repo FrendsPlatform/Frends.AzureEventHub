@@ -1,475 +1,145 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Azure.Storage.Blobs;
 using Frends.AzureEventHub.UpdateCheckpoint.Definitions;
 using NUnit.Framework;
 
 namespace Frends.AzureEventHub.UpdateCheckpoint.Tests;
 
+/// <summary>
+/// Validation-level tests that do not require live Azure resources. These exercise the
+/// argument and authentication validation that runs before any network call is made.
+/// End-to-end behavior (relative rollback, absolute targeting, range validation,
+/// enqueued-time targeting, ownership) is covered in <see cref="IntegrationTest"/>.
+/// </summary>
 [TestFixture]
 public class UpdateCheckpointsTests
 {
-    private string _blobStorageConnectionString;
-    private string _containerName;
-    private string _eventHubNamespace;
-    private string _eventHubName;
-    private string _consumerGroup;
-    private BlobContainerClient _containerClient;
-
-    private string _storageAccountName;
-    private string _sasToken;
-    private string _tenantId;
-    private string _clientId;
-    private string _clientSecret;
-
-    [SetUp]
-    public async Task SetUp()
+    [Test]
+    public void UpdateCheckpoints_MissingEventHubName_ThrowsArgumentException()
     {
-        _blobStorageConnectionString = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__CONNECTION_STRING");
-        _containerName = "checkpointcontainer" + Guid.NewGuid().ToString();
-        _eventHubNamespace = Environment.GetEnvironmentVariable("FRENDS__AZURE_EVENT_HUB__FULLY_QUALIFIED_NAMESPACE");
-        var eventHubConnectionString = Environment.GetEnvironmentVariable("FRENDS__AZURE_EVENT_HUB__CONNECTION_STRING");
-        _eventHubName = Helpers.ExtractEntityPath(eventHubConnectionString);
-        _consumerGroup = "$Default";
-        _sasToken = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__ACCESS_KEY");
-        _tenantId = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__TENANT_ID");
-        _clientId = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__APP_ID");
-        _clientSecret = Environment.GetEnvironmentVariable("FRENDS__AZURE_BLOB_STORAGE__CLIENT_SECRET");
-        _storageAccountName = Helpers.ExtractStorageAccountName(_blobStorageConnectionString);
-        _containerClient = new BlobContainerClient(_blobStorageConnectionString, _containerName);
-        await _containerClient.CreateIfNotExistsAsync();
+        var input = new Input { EventHubName = string.Empty, ConsumerGroup = "$Default", PartitionIds = ["0"] };
+        var options = new Options { ThrowErrorOnFailure = true };
 
-        await CreateTestCheckpoints();
-    }
-
-    [TearDown]
-    public async Task TearDown()
-    {
-        await _containerClient.DeleteIfExistsAsync();
+        var ex = Assert.ThrowsAsync<Exception>(() =>
+            AzureEventHub.UpdateCheckpoint(input, ValidStorageConnection(), options, CancellationToken.None));
+        Assert.That(ex.Message, Does.Contain("EventHubName is required"));
     }
 
     [Test]
-    public async Task UpdateCheckpoints_MixedScenario_ReturnsPartialSuccess()
+    public void UpdateCheckpoints_MissingConsumerGroup_ThrowsArgumentException()
     {
-        var input = new Input
-        {
-            EventHubName = _eventHubName,
-            ConsumerGroup = _consumerGroup,
-            PartitionIds = ["0", "1", "2", "3"],
-            RollbackEvents = 5,
-        };
+        var input = new Input { EventHubName = "hub", ConsumerGroup = string.Empty, PartitionIds = ["0"] };
+        var options = new Options { ThrowErrorOnFailure = true };
 
-        var connection = new Connection
-        {
-            AuthMethod = AuthMethod.ConnectionString,
-            ConnectionString = _blobStorageConnectionString,
-            ContainerName = _containerName,
-            EventHubNamespace = _eventHubNamespace,
-        };
+        var ex = Assert.ThrowsAsync<Exception>(() =>
+            AzureEventHub.UpdateCheckpoint(input, ValidStorageConnection(), options, CancellationToken.None));
+        Assert.That(ex.Message, Does.Contain("ConsumerGroup is required"));
+    }
 
-        var options = new Options
-        {
-            FailIfPartitionMissing = false,
-            ThrowErrorOnFailure = false,
-        };
+    [Test]
+    public void UpdateCheckpoints_NoPartitionsAndNoTargets_ThrowsArgumentException()
+    {
+        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default" };
+        var options = new Options { ThrowErrorOnFailure = true };
 
-        var result = await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
+        var ex = Assert.ThrowsAsync<Exception>(() =>
+            AzureEventHub.UpdateCheckpoint(input, ValidStorageConnection(), options, CancellationToken.None));
+        Assert.That(ex.Message, Does.Contain("At least one PartitionId or Target is required"));
+    }
+
+    [Test]
+    public async Task UpdateCheckpoints_NoPartitionsAndNoTargets_ReturnsErrorWhenNotThrowing()
+    {
+        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default" };
+        var options = new Options { ThrowErrorOnFailure = false };
+
+        var result = await AzureEventHub.UpdateCheckpoint(input, ValidStorageConnection(), options, CancellationToken.None);
 
         Assert.That(result.Success, Is.False);
-        Assert.That(result.UpdatedPartitions.Length, Is.EqualTo(2));
-        Assert.That(result.SkippedPartitions.Length, Is.EqualTo(2));
-        Assert.That(result.RollbackApplied, Is.True);
-        Assert.That(result.Errors.Length, Is.EqualTo(2));
-
-        Assert.That(result.UpdatedPartitions, Contains.Item("0"));
-        Assert.That(result.UpdatedPartitions, Contains.Item("1"));
-
-        Assert.That(result.SkippedPartitions, Contains.Item("2"));
-        Assert.That(result.SkippedPartitions, Contains.Item("3"));
-
-        await VerifyCheckpointRollback("0", 5);
-        await VerifyCheckpointRollback("1", 5);
+        Assert.That(result.Errors, Is.Not.Empty);
+        Assert.That(result.Errors[0].Message, Does.Contain("At least one PartitionId or Target is required"));
     }
 
     [Test]
-    public async Task UpdateCheckpoints_AllPartitionsExist_ReturnsFullSuccess()
+    public void UpdateCheckpoints_StorageSasTokenMissing_ThrowsArgumentException()
     {
-        var input = new Input
-        {
-            EventHubName = _eventHubName,
-            ConsumerGroup = _consumerGroup,
-            PartitionIds = ["0", "1"],
-            RollbackEvents = 0,
-        };
-
-        var connection = new Connection
-        {
-            AuthMethod = AuthMethod.ConnectionString,
-            ConnectionString = _blobStorageConnectionString,
-            ContainerName = _containerName,
-            EventHubNamespace = _eventHubNamespace,
-        };
-
-        var options = new Options
-        {
-            FailIfPartitionMissing = false,
-            ThrowErrorOnFailure = false,
-        };
-
-        var result = await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
-
-        Assert.That(result.Success, Is.True);
-        Assert.That(result.UpdatedPartitions.Length, Is.EqualTo(2));
-        Assert.That(result.SkippedPartitions.Length, Is.EqualTo(0));
-        Assert.That(result.RollbackApplied, Is.False);
-        Assert.That(result.Errors.Length, Is.EqualTo(0));
-    }
-
-    [Test]
-    public async Task UpdateCheckpoints_MixedScenario_WithThrowOnFailure_ThrowsException()
-    {
-        var input = new Input
-        {
-            EventHubName = _eventHubName,
-            ConsumerGroup = _consumerGroup,
-            PartitionIds = ["0", "1", "2", "3"],
-            RollbackEvents = 5,
-        };
-
-        var connection = new Connection
-        {
-            AuthMethod = AuthMethod.ConnectionString,
-            ConnectionString = _blobStorageConnectionString,
-            ContainerName = _containerName,
-            EventHubNamespace = _eventHubNamespace,
-        };
-
-        var options = new Options
-        {
-            FailIfPartitionMissing = false,
-            ThrowErrorOnFailure = true,
-        };
-
-        try
-        {
-            await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
-            Assert.Fail("Expected an exception to be thrown");
-        }
-        catch (Exception ex)
-        {
-            Assert.That(ex.Message, Contains.Substring("Failed to update one or more checkpoints"));
-        }
-    }
-
-    [Test]
-    public void UpdateCheckpoints_InvalidInput_ThrowsArgumentException()
-    {
-        var input = new Input
-        {
-            EventHubName = string.Empty,
-            ConsumerGroup = _consumerGroup,
-            PartitionIds = ["0"],
-        };
-
-        var connection = new Connection
-        {
-            AuthMethod = AuthMethod.ConnectionString,
-            ConnectionString = _blobStorageConnectionString,
-            ContainerName = _containerName,
-            EventHubNamespace = _eventHubNamespace,
-        };
-
-        var options = new Options();
-
-        Assert.ThrowsAsync<Exception>(() =>
-                    AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
-    }
-
-    [Test]
-    public async Task UpdateCheckpoints_FailIfPartitionMissing_ThrowsException()
-    {
-        var input = new Input
-        {
-            EventHubName = _eventHubName,
-            ConsumerGroup = _consumerGroup,
-            PartitionIds = ["0", "999"],
-            RollbackEvents = 0,
-        };
-
-        var connection = new Connection
-        {
-            AuthMethod = AuthMethod.ConnectionString,
-            ConnectionString = _blobStorageConnectionString,
-            ContainerName = _containerName,
-            EventHubNamespace = _eventHubNamespace,
-        };
-
-        var options = new Options
-        {
-            FailIfPartitionMissing = true,
-            ThrowErrorOnFailure = true,
-        };
-
-        try
-        {
-            await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
-            Assert.Fail("Expected an exception to be thrown");
-        }
-        catch (Exception ex)
-        {
-            Assert.That(ex.Message, Contains.Substring("Checkpoint not found for partition 999"));
-        }
-    }
-
-    [Test]
-    [Ignore("SAS token test - requires valid SAS token in HIQ_AZUREBLOBSTORAGE_TESTSORAGE01ACCESSKEY. Can be run locally with proper credentials.")]
-    public async Task UpdateCheckpoints_SasToken_ReturnsSuccess()
-    {
-        var input = new Input
-        {
-            EventHubName = _eventHubName,
-            ConsumerGroup = _consumerGroup,
-            PartitionIds = ["0", "1"],
-            RollbackEvents = 0,
-        };
-        var connection = new Connection
-        {
-            AuthMethod = AuthMethod.SasToken,
-            SasToken = _sasToken,
-            StorageAccountName = _storageAccountName,
-            ContainerName = _containerName,
-            EventHubNamespace = _eventHubNamespace,
-        };
-        var options = new Options
-        {
-            FailIfPartitionMissing = false,
-            ThrowErrorOnFailure = false,
-        };
-
-        var result = await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
-
-        Assert.That(result.Success, Is.True);
-        Assert.That(result.UpdatedPartitions, Contains.Item("0"));
-        Assert.That(result.UpdatedPartitions, Contains.Item("1"));
-    }
-
-    [Test]
-    [Ignore("OAuth test - requires valid OAuth credentials in HIQ_AZUREBLOBSTORAGE_TENANTID, HIQ_AZUREBLOBSTORAGE_APPID, and HIQ_AZUREBLOBSTORAGE_CLIENTSECRET. Can be run locally with proper credentials.")]
-    public async Task UpdateCheckpoints_OAuth_ReturnsSuccess()
-    {
-        var input = new Input
-        {
-            EventHubName = _eventHubName,
-            ConsumerGroup = _consumerGroup,
-            PartitionIds = ["0", "1"],
-            RollbackEvents = 0,
-        };
-        var connection = new Connection
-        {
-            AuthMethod = AuthMethod.OAuth,
-            StorageAccountName = _storageAccountName,
-            ContainerName = _containerName,
-            EventHubNamespace = _eventHubNamespace,
-            OAuth = new OAuthConfig
-            {
-                TenantId = _tenantId,
-                ClientId = _clientId,
-                ClientSecret = _clientSecret,
-            },
-        };
-        var options = new Options
-        {
-            FailIfPartitionMissing = false,
-            ThrowErrorOnFailure = false,
-        };
-
-        var result = await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
-
-        Assert.That(result.Success, Is.True);
-        Assert.That(result.UpdatedPartitions, Contains.Item("0"));
-        Assert.That(result.UpdatedPartitions, Contains.Item("1"));
-    }
-
-    [Test]
-    public async Task UpdateCheckpoints_SasToken_MissingToken_ThrowsException()
-    {
-        var input = new Input
-        {
-            EventHubName = _eventHubName,
-            ConsumerGroup = _consumerGroup,
-            PartitionIds = ["0"],
-            RollbackEvents = 0,
-        };
-        var connection = new Connection
-        {
-            AuthMethod = AuthMethod.SasToken,
-            SasToken = null,
-            StorageAccountName = _storageAccountName,
-            ContainerName = _containerName,
-            EventHubNamespace = _eventHubNamespace,
-        };
-        var options = new Options
-        {
-            ThrowErrorOnFailure = true,
-        };
-
-        try
-        {
-            await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
-            Assert.Fail("Expected an exception to be thrown");
-        }
-        catch (Exception ex)
-        {
-            Assert.That(ex.Message, Contains.Substring("SasToken must be provided when using SasToken auth method"));
-        }
-    }
-
-    [Test]
-    public async Task UpdateCheckpoints_OAuth_MissingConfig_ThrowsException()
-    {
-        var input = new Input
-        {
-            EventHubName = _eventHubName,
-            ConsumerGroup = _consumerGroup,
-            PartitionIds = ["0"],
-            RollbackEvents = 0,
-        };
-        var connection = new Connection
-        {
-            AuthMethod = AuthMethod.OAuth,
-            OAuth = null,
-            StorageAccountName = _storageAccountName,
-            ContainerName = _containerName,
-            EventHubNamespace = _eventHubNamespace,
-        };
-        var options = new Options
-        {
-            ThrowErrorOnFailure = true,
-        };
-
-        try
-        {
-            await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None);
-            Assert.Fail("Expected an exception to be thrown");
-        }
-        catch (Exception ex)
-        {
-            Assert.That(ex.Message, Contains.Substring("OAuth configuration must be provided when using OAuth auth method"));
-        }
-    }
-
-    [Test]
-    public async Task UpdateCheckpoints_MissingSequenceNumberMetadata_ThrowsInvalidOperation()
-    {
-        var partitionId = "0";
-        var blobClient = _containerClient.GetBlobClient($"{_eventHubNamespace}/{_eventHubName}/{_consumerGroup}/checkpoint/{partitionId}");
-        using var emptyStream = new MemoryStream();
-        await blobClient.UploadAsync(emptyStream, overwrite: true);
-
-        var input = new Input
-        {
-            EventHubName = _eventHubName,
-            ConsumerGroup = _consumerGroup,
-            PartitionIds = new[] { partitionId },
-            RollbackEvents = 1,
-        };
-
-        var connection = new Connection
-        {
-            AuthMethod = AuthMethod.ConnectionString,
-            ConnectionString = _blobStorageConnectionString,
-            ContainerName = _containerName,
-            EventHubNamespace = _eventHubNamespace,
-        };
-
+        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", PartitionIds = ["0"] };
+        var connection = ValidStorageConnection();
+        connection.AuthMethod = AuthMethod.SasToken;
+        connection.SasToken = null;
+        connection.StorageAccountName = "test";
         var options = new Options { ThrowErrorOnFailure = true };
 
-        var ex = Assert.ThrowsAsync<Exception>(async () =>
-            await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
-
-        Assert.That(ex.Message, Does.Contain("missing required 'sequencenumber' metadata"));
+        var ex = Assert.ThrowsAsync<Exception>(() =>
+            AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
+        Assert.That(ex.Message, Does.Contain("SasToken must be provided when using SasToken auth method"));
     }
 
     [Test]
-    public async Task UpdateCheckpoints_InvalidSequenceNumberMetadata_ThrowsInvalidOperation()
+    public void UpdateCheckpoints_StorageOAuthMissing_ThrowsArgumentException()
     {
-        var partitionId = "0";
-        var blobClient = _containerClient.GetBlobClient($"{_eventHubNamespace}/{_eventHubName}/{_consumerGroup}/checkpoint/{partitionId}");
-        using var emptyStream = new MemoryStream();
-        await blobClient.UploadAsync(emptyStream, overwrite: true);
-
-        var metadata = new Dictionary<string, string>
-        {
-            ["offset"] = "1000",
-            ["sequencenumber"] = "INVALID_NUMBER",
-            ["clientidentifier"] = Guid.NewGuid().ToString(),
-        };
-        await blobClient.SetMetadataAsync(metadata);
-
-        var input = new Input
-        {
-            EventHubName = _eventHubName,
-            ConsumerGroup = _consumerGroup,
-            PartitionIds = new[] { partitionId },
-            RollbackEvents = 1,
-        };
-
-        var connection = new Connection
-        {
-            AuthMethod = AuthMethod.ConnectionString,
-            ConnectionString = _blobStorageConnectionString,
-            ContainerName = _containerName,
-            EventHubNamespace = _eventHubNamespace,
-        };
-
+        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", PartitionIds = ["0"] };
+        var connection = ValidStorageConnection();
+        connection.AuthMethod = AuthMethod.OAuth;
+        connection.OAuth = null;
+        connection.StorageAccountName = "test";
         var options = new Options { ThrowErrorOnFailure = true };
 
-        var ex = Assert.ThrowsAsync<Exception>(async () =>
-            await AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
-
-        Assert.That(ex.Message, Does.Contain("has invalid 'sequencenumber' value"));
+        var ex = Assert.ThrowsAsync<Exception>(() =>
+            AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
+        Assert.That(ex.Message, Does.Contain("OAuth configuration must be provided when using OAuth auth method"));
     }
 
-    private async Task CreateTestCheckpoints()
+    [Test]
+    public void UpdateCheckpoints_EventHubConnectionStringMissing_ThrowsArgumentException()
     {
-        await CreateCheckpoint("0", 1000, 100);
-        await CreateCheckpoint("1", 2000, 200);
+        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", PartitionIds = ["0"] };
+        var connection = ValidStorageConnection();
+        connection.EventHubAuthMethod = AuthMethod.ConnectionString;
+        connection.EventHubConnectionString = null;
+        var options = new Options { ThrowErrorOnFailure = true };
+
+        var ex = Assert.ThrowsAsync<Exception>(() =>
+            AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
+        Assert.That(ex.Message, Does.Contain("EventHubConnectionString must be provided"));
     }
 
-    private async Task CreateCheckpoint(string partitionId, long offset, long sequenceNumber)
+    [Test]
+    public void UpdateCheckpoints_EventHubOAuthMissing_ThrowsArgumentException()
     {
-        var blobName = $"{_eventHubNamespace}/{_eventHubName}/{_consumerGroup}/checkpoint/{partitionId}";
-        var blobClient = _containerClient.GetBlobClient(blobName);
+        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", PartitionIds = ["0"] };
+        var connection = ValidStorageConnection();
+        connection.EventHubAuthMethod = AuthMethod.OAuth;
+        connection.OAuth = null;
+        var options = new Options { ThrowErrorOnFailure = true };
 
-        using var empty = new MemoryStream();
-        await blobClient.UploadAsync(empty, overwrite: true);
-
-        var metadata = new Dictionary<string, string>
-        {
-            ["offset"] = offset.ToString(),
-            ["sequencenumber"] = sequenceNumber.ToString(),
-            ["clientidentifier"] = Guid.NewGuid().ToString(),
-        };
-
-        await blobClient.SetMetadataAsync(metadata);
+        var ex = Assert.ThrowsAsync<Exception>(() =>
+            AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
+        Assert.That(ex.Message, Does.Contain("OAuth configuration must be provided when using OAuth Event Hub auth method"));
     }
 
-    private async Task VerifyCheckpointRollback(string partitionId, int rollbackEvents)
+    [Test]
+    public void UpdateCheckpoints_EventHubSasTokenMissing_ThrowsArgumentException()
     {
-        var blobName = $"{_eventHubNamespace}/{_eventHubName}/{_consumerGroup}/checkpoint/{partitionId}";
-        var blobClient = _containerClient.GetBlobClient(blobName);
+        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", PartitionIds = ["0"] };
+        var connection = ValidStorageConnection();
+        connection.EventHubAuthMethod = AuthMethod.SasToken;
+        connection.EventHubSasToken = null;
+        var options = new Options { ThrowErrorOnFailure = true };
 
-        var props = await blobClient.GetPropertiesAsync();
-        var metadata = props.Value.Metadata;
-
-        long seq = long.Parse(metadata["sequencenumber"]);
-
-        if (partitionId == "0")
-            Assert.That(seq, Is.EqualTo(100 - rollbackEvents));
-        else if (partitionId == "1")
-            Assert.That(seq, Is.EqualTo(200 - rollbackEvents));
+        var ex = Assert.ThrowsAsync<Exception>(() =>
+            AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
+        Assert.That(ex.Message, Does.Contain("EventHubSasToken must be provided"));
     }
+
+    private static Connection ValidStorageConnection() => new()
+    {
+        AuthMethod = AuthMethod.ConnectionString,
+        ConnectionString = "DefaultEndpointsProtocol=https;AccountName=test;AccountKey=dGVzdA==;EndpointSuffix=core.windows.net",
+        ContainerName = "checkpoints",
+        EventHubNamespace = "test.servicebus.windows.net",
+        EventHubAuthMethod = AuthMethod.ConnectionString,
+        EventHubConnectionString = "Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=k;SharedAccessKey=v",
+    };
 }
