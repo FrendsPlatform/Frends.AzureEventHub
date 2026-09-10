@@ -35,4 +35,16 @@ public class Options
     /// <example>Task failed during execution</example>
     [DisplayFormat(DataFormatString = "Text")]
     public string ErrorMessageOnFailure { get; set; }
+
+    /// <summary>
+    /// Controls behavior when the consuming Process still owns a partition (an active
+    /// ownership record exists in the checkpoint container). Rewinding a checkpoint while
+    /// the Process owns the partition races with the Process's own checkpoint writes.
+    /// If true, the partition is failed with a clear error and left unchanged.
+    /// If false, the checkpoint is rewritten anyway and the race is the operator's responsibility.
+    /// The consuming Process should be stopped before rewinding.
+    /// </summary>
+    /// <example>true</example>
+    [DefaultValue(true)]
+    public bool FailIfPartitionOwned { get; set; } = true;
 }

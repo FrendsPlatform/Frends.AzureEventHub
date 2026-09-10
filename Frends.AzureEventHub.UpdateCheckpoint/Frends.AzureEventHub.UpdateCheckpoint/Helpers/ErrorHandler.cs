@@ -48,7 +48,8 @@ public static class ErrorHandler
             string errorMessage,
             List<string> updatedPartitions,
             List<string> skippedPartitions,
-            bool rollbackApplied)
+            bool rollbackApplied,
+            List<AppliedTarget> appliedTargets = null)
     {
         if (throwOnFailure)
         {
@@ -63,6 +64,7 @@ public static class ErrorHandler
             SkippedPartitions = skippedPartitions.ToArray(),
             RollbackApplied = rollbackApplied,
             Errors = errors.ToArray(),
+            AppliedTargets = (appliedTargets ?? new List<AppliedTarget>()).ToArray(),
         };
     }
 }
