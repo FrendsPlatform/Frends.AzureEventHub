@@ -18,7 +18,7 @@ public class UpdateCheckpointsTests
     [Test]
     public void UpdateCheckpoints_MissingEventHubName_ThrowsArgumentException()
     {
-        var input = new Input { EventHubName = string.Empty, ConsumerGroup = "$Default", PartitionIds = ["0"] };
+        var input = new Input { EventHubName = string.Empty, ConsumerGroup = "$Default", Targets = [new PartitionTarget { PartitionId = "0" }] };
         var options = new Options { ThrowErrorOnFailure = true };
 
         var ex = Assert.ThrowsAsync<Exception>(() =>
@@ -29,7 +29,7 @@ public class UpdateCheckpointsTests
     [Test]
     public void UpdateCheckpoints_MissingConsumerGroup_ThrowsArgumentException()
     {
-        var input = new Input { EventHubName = "hub", ConsumerGroup = string.Empty, PartitionIds = ["0"] };
+        var input = new Input { EventHubName = "hub", ConsumerGroup = string.Empty, Targets = [new PartitionTarget { PartitionId = "0" }] };
         var options = new Options { ThrowErrorOnFailure = true };
 
         var ex = Assert.ThrowsAsync<Exception>(() =>
@@ -45,7 +45,7 @@ public class UpdateCheckpointsTests
 
         var ex = Assert.ThrowsAsync<Exception>(() =>
             AzureEventHub.UpdateCheckpoint(input, ValidStorageConnection(), options, CancellationToken.None));
-        Assert.That(ex.Message, Does.Contain("At least one PartitionId or Target is required"));
+        Assert.That(ex.Message, Does.Contain("At least one Target is required"));
     }
 
     [Test]
@@ -58,13 +58,13 @@ public class UpdateCheckpointsTests
 
         Assert.That(result.Success, Is.False);
         Assert.That(result.Errors, Is.Not.Empty);
-        Assert.That(result.Errors[0].Message, Does.Contain("At least one PartitionId or Target is required"));
+        Assert.That(result.Errors[0].Message, Does.Contain("At least one Target is required"));
     }
 
     [Test]
     public void UpdateCheckpoints_StorageSasTokenMissing_ThrowsArgumentException()
     {
-        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", PartitionIds = ["0"] };
+        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", Targets = [new PartitionTarget { PartitionId = "0" }] };
         var connection = ValidStorageConnection();
         connection.AuthMethod = AuthMethod.SasToken;
         connection.SasToken = null;
@@ -79,7 +79,7 @@ public class UpdateCheckpointsTests
     [Test]
     public void UpdateCheckpoints_StorageOAuthMissing_ThrowsArgumentException()
     {
-        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", PartitionIds = ["0"] };
+        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", Targets = [new PartitionTarget { PartitionId = "0" }] };
         var connection = ValidStorageConnection();
         connection.AuthMethod = AuthMethod.OAuth;
         connection.OAuth = null;
@@ -94,7 +94,7 @@ public class UpdateCheckpointsTests
     [Test]
     public void UpdateCheckpoints_EventHubConnectionStringMissing_ThrowsArgumentException()
     {
-        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", PartitionIds = ["0"] };
+        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", Targets = [new PartitionTarget { PartitionId = "0" }] };
         var connection = ValidStorageConnection();
         connection.EventHubAuthMethod = AuthMethod.ConnectionString;
         connection.EventHubConnectionString = null;
@@ -108,7 +108,7 @@ public class UpdateCheckpointsTests
     [Test]
     public void UpdateCheckpoints_EventHubOAuthMissing_ThrowsArgumentException()
     {
-        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", PartitionIds = ["0"] };
+        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", Targets = [new PartitionTarget { PartitionId = "0" }] };
         var connection = ValidStorageConnection();
         connection.EventHubAuthMethod = AuthMethod.OAuth;
         connection.OAuth = null;
@@ -122,7 +122,7 @@ public class UpdateCheckpointsTests
     [Test]
     public void UpdateCheckpoints_EventHubSasTokenMissing_ThrowsArgumentException()
     {
-        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", PartitionIds = ["0"] };
+        var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default", Targets = [new PartitionTarget { PartitionId = "0" }] };
         var connection = ValidStorageConnection();
         connection.EventHubAuthMethod = AuthMethod.SasToken;
         connection.EventHubSasToken = null;

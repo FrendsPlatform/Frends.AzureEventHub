@@ -53,8 +53,7 @@ internal class IntegrationTest
         {
             EventHubName = _hubName,
             ConsumerGroup = _consumer,
-            PartitionIds = ["0"],
-            RollbackEvents = 1,
+            Targets = [new PartitionTarget { PartitionId = "0", Mode = TargetMode.RelativeRollback, RollbackEvents = 1 }],
         };
 
         _opts = new Options { FailIfPartitionMissing = true, FailIfPartitionOwned = false };
@@ -97,7 +96,7 @@ internal class IntegrationTest
         var lastSequence = await RunProcessor(5, false, false);
         var targetSequence = lastSequence - 2;
 
-        _input.Targets = [new PartitionTarget { PartitionId = "0", TargetSequenceNumber = targetSequence }];
+        _input.Targets = [new PartitionTarget { PartitionId = "0", Mode = TargetMode.AbsoluteSequenceNumber, TargetSequenceNumber = targetSequence }];
 
         var result = await AzureEventHub.UpdateCheckpoint(_input, _connection, _opts, CancellationToken.None);
 
@@ -116,7 +115,7 @@ internal class IntegrationTest
         await SendEventsToPartition("0", 3);
         await RunProcessor(3, false, false);
 
-        _input.Targets = [new PartitionTarget { PartitionId = "0", TargetSequenceNumber = long.MaxValue }];
+        _input.Targets = [new PartitionTarget { PartitionId = "0", Mode = TargetMode.AbsoluteSequenceNumber, TargetSequenceNumber = long.MaxValue }];
         _opts.ThrowErrorOnFailure = false;
 
         var result = await AzureEventHub.UpdateCheckpoint(_input, _connection, _opts, CancellationToken.None);
@@ -134,7 +133,7 @@ internal class IntegrationTest
         SetupEnvironment();
         await CreateContainer();
 
-        _input.Targets = [new PartitionTarget { PartitionId = "999", TargetSequenceNumber = 1 }];
+        _input.Targets = [new PartitionTarget { PartitionId = "999", Mode = TargetMode.AbsoluteSequenceNumber, TargetSequenceNumber = 1 }];
         _opts.ThrowErrorOnFailure = false;
 
         var result = await AzureEventHub.UpdateCheckpoint(_input, _connection, _opts, CancellationToken.None);
@@ -154,7 +153,7 @@ internal class IntegrationTest
         await SendEventsToPartition("0", 5);
         await RunProcessor(5, false, false);
 
-        _input.Targets = [new PartitionTarget { PartitionId = "0", TargetEnqueuedTime = DateTimeOffset.UtcNow.AddMinutes(-30) }];
+        _input.Targets = [new PartitionTarget { PartitionId = "0", Mode = TargetMode.AbsoluteEnqueuedTime, TargetEnqueuedTime = DateTimeOffset.UtcNow.AddMinutes(-30) }];
 
         var result = await AzureEventHub.UpdateCheckpoint(_input, _connection, _opts, CancellationToken.None);
 

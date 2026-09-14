@@ -49,10 +49,8 @@ public static class AzureEventHub
             if (string.IsNullOrWhiteSpace(input.ConsumerGroup))
                 throw new ArgumentException("ConsumerGroup is required", nameof(input.ConsumerGroup));
 
-            var useAbsolute = input.Targets != null && input.Targets.Length > 0;
-
-            if (!useAbsolute && (input.PartitionIds == null || input.PartitionIds.Length == 0))
-                throw new ArgumentException("At least one PartitionId or Target is required", nameof(input.PartitionIds));
+            if (input.Targets == null || input.Targets.Length == 0)
+                throw new ArgumentException("At least one Target is required", nameof(input.Targets));
 
             ValidateStorageAuth(connection);
             ValidateEventHubAuth(connection);
@@ -69,12 +67,9 @@ public static class AzureEventHub
             var appliedTargets = new List<AppliedTarget>();
             bool rollbackApplied = false;
 
-            var work = useAbsolute
-                ? input.Targets.Select(t => (PartitionId: t.PartitionId, Target: t)).ToList()
-                : input.PartitionIds.Select(p => (PartitionId: p, Target: (PartitionTarget)null)).ToList();
-
-            foreach (var (partitionId, target) in work)
+            foreach (var target in input.Targets)
             {
+                var partitionId = target.PartitionId;
                 try
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -106,43 +101,48 @@ public static class AzureEventHub
                     long targetSequence;
                     string targetOffset;
 
-                    if (target != null && target.TargetEnqueuedTime.HasValue)
+                    switch (target.Mode)
                     {
-                        if (target.TargetSequenceNumber.HasValue)
-                        {
-                            throw new ArgumentException($"Partition '{partitionId}' specifies both TargetSequenceNumber and TargetEnqueuedTime. Provide only one.");
-                        }
+                        case TargetMode.AbsoluteEnqueuedTime:
+                            if (!target.TargetEnqueuedTime.HasValue)
+                            {
+                                throw new ArgumentException(
+                                    $"Partition '{partitionId}' uses AbsoluteEnqueuedTime mode but TargetEnqueuedTime is not set.");
+                            }
 
-                        (targetSequence, targetOffset) = await ResolvePositionAsync(
-                            connection, input, partitionId, EventPosition.FromEnqueuedTime(target.TargetEnqueuedTime.Value), cancellationToken);
-                    }
-                    else if (target != null)
-                    {
-                        if (!target.TargetSequenceNumber.HasValue)
-                        {
-                            throw new ArgumentException($"Partition '{partitionId}' target must specify either TargetSequenceNumber or TargetEnqueuedTime.");
-                        }
+                            (targetSequence, targetOffset) = await ResolvePositionAsync(
+                                connection, input, partitionId, EventPosition.FromEnqueuedTime(target.TargetEnqueuedTime.Value), cancellationToken);
+                            break;
 
-                        targetSequence = target.TargetSequenceNumber.Value;
-                        ValidateInRange(partitionId, targetSequence, partitionProperties);
-                        targetOffset = await ResolveOffsetForSequenceAsync(connection, input, partitionId, targetSequence, cancellationToken);
-                    }
-                    else
-                    {
-                        if (!previousSequence.HasValue)
-                        {
-                            throw new InvalidOperationException(
-                                $"Checkpoint for partition '{partitionId}' has no current sequence number to roll back from.");
-                        }
+                        case TargetMode.AbsoluteSequenceNumber:
+                            if (!target.TargetSequenceNumber.HasValue)
+                            {
+                                throw new ArgumentException(
+                                    $"Partition '{partitionId}' uses AbsoluteSequenceNumber mode but TargetSequenceNumber is not set.");
+                            }
 
-                        targetSequence = Math.Max(partitionProperties.BeginningSequenceNumber, previousSequence.Value - input.RollbackEvents);
-                        if (input.RollbackEvents > 0)
-                        {
-                            rollbackApplied = true;
-                        }
+                            targetSequence = target.TargetSequenceNumber.Value;
+                            targetOffset = await ResolveOffsetForSequenceAsync(connection, input, partitionId, targetSequence, cancellationToken);
+                            break;
 
-                        ValidateInRange(partitionId, targetSequence, partitionProperties);
-                        targetOffset = await ResolveOffsetForSequenceAsync(connection, input, partitionId, targetSequence, cancellationToken);
+                        case TargetMode.RelativeRollback:
+                            if (!previousSequence.HasValue)
+                            {
+                                throw new PartitionMissingException(
+                                    $"Checkpoint for partition '{partitionId}' has no current sequence number to roll back from.");
+                            }
+
+                            targetSequence = Math.Max(partitionProperties.BeginningSequenceNumber, previousSequence.Value - target.RollbackEvents);
+                            if (target.RollbackEvents > 0)
+                            {
+                                rollbackApplied = true;
+                            }
+
+                            targetOffset = await ResolveOffsetForSequenceAsync(connection, input, partitionId, targetSequence, cancellationToken);
+                            break;
+
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(target.Mode), "Invalid target mode.");
                     }
 
                     ValidateInRange(partitionId, targetSequence, partitionProperties);
@@ -172,6 +172,11 @@ public static class AzureEventHub
                         Message = $"Failed to update checkpoint for partition {partitionId}: {ex.Message}",
                         AdditionalInfo = ex,
                     });
+
+                    if (ex is PartitionMissingException && options.FailIfPartitionMissing)
+                    {
+                        break;
+                    }
                 }
             }
 
