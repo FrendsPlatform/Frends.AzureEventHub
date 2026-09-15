@@ -163,6 +163,27 @@ internal class IntegrationTest
         await CleanupContainer();
     }
 
+    [Test]
+    public async Task UpdateCheckpoints_Integration_RelativeRollbackWithNoExistingCheckpoint_ReturnsError()
+    {
+        SetupEnvironment();
+        await CreateContainer();
+        await SendEventsToPartition("0", 3);
+
+        // No processor has run yet, so no checkpoint exists for this partition/consumer group.
+        _input.Targets = [new PartitionTarget { PartitionId = "0", Mode = TargetMode.RelativeRollback, RollbackEvents = 1 }];
+        _opts.FailIfPartitionMissing = true;
+        _opts.ThrowErrorOnFailure = false;
+
+        var result = await AzureEventHub.UpdateCheckpoint(_input, _connection, _opts, CancellationToken.None);
+
+        Assert.That(result.Success, Is.False);
+        Assert.That(result.SkippedPartitions, Contains.Item("0"));
+        Assert.That(result.Errors.Single().Message, Does.Contain("has no current sequence number to roll back from"));
+
+        await CleanupContainer();
+    }
+
     private async Task CreateContainer()
     {
         _container = new BlobContainerClient(_blobConn, _containerName);
