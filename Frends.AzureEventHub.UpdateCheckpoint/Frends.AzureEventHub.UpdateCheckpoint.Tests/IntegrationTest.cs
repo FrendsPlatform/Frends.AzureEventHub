@@ -231,6 +231,7 @@ internal class IntegrationTest
         }
 
         await processor.StopProcessingAsync();
+        await Task.Delay(TimeSpan.FromSeconds(10));
 
         return read.Count > 0 ? read.Last().SequenceNumber : 0;
     }
