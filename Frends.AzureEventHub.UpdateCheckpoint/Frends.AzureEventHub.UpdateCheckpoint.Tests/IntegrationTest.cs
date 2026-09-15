@@ -76,6 +76,9 @@ internal class IntegrationTest
         Assert.That(result.AppliedTargets.Length, Is.EqualTo(1));
         Assert.That(result.AppliedTargets[0].NewSequenceNumber, Is.EqualTo(sequenceNumber - 1));
 
+        var blob = _container.GetBlobClient($"{_hubNamespace}/{_hubName}/{_consumer}/checkpoint/0");
+        Assert.That(await blob.ExistsAsync(), Is.True);
+
         var updated = await GetCheckpointSequence();
         Assert.That(updated, Is.EqualTo(sequenceNumber - 1));
 
@@ -231,7 +234,11 @@ internal class IntegrationTest
         }
 
         await processor.StopProcessingAsync();
-        await Task.Delay(TimeSpan.FromSeconds(10));
+        var ownershipBlob = _container.GetBlobClient(
+            $"{_hubNamespace}/{_hubName}/{_consumer}/ownership/0");
+        if (await ownershipBlob.ExistsAsync())
+            await ownershipBlob.DeleteAsync();
+        await Task.Delay(TimeSpan.FromSeconds(5));
 
         return read.Count > 0 ? read.Last().SequenceNumber : 0;
     }
