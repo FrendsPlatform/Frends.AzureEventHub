@@ -122,6 +122,7 @@ public static class AzureEventHub
                             }
 
                             targetSequence = target.TargetSequenceNumber.Value;
+                            ValidateInRange(partitionId, targetSequence, partitionProperties);
                             targetOffset = await ResolveOffsetForSequenceAsync(connection, input, partitionId, targetSequence, cancellationToken);
                             break;
 
@@ -138,6 +139,7 @@ public static class AzureEventHub
                                 rollbackApplied = true;
                             }
 
+                            ValidateInRange(partitionId, targetSequence, partitionProperties);
                             targetOffset = await ResolveOffsetForSequenceAsync(connection, input, partitionId, targetSequence, cancellationToken);
                             break;
 
@@ -282,26 +284,36 @@ public static class AzureEventHub
         _ => throw new ArgumentOutOfRangeException(nameof(connection.EventHubAuthMethod), "Invalid Event Hub auth method"),
     };
 
-    private static PartitionReceiver CreatePartitionReceiver(Connection connection, string eventHubName, string partitionId, EventPosition position) => connection.EventHubAuthMethod switch
+    private static PartitionReceiver CreatePartitionReceiver(Connection connection, string eventHubName, string consumerGroup, string partitionId, EventPosition position)
     {
-        AuthMethod.ConnectionString => new PartitionReceiver(
-            EventHubConsumerClient.DefaultConsumerGroupName, partitionId, position, connection.EventHubConnectionString, eventHubName),
-        AuthMethod.SasToken => new PartitionReceiver(
-            EventHubConsumerClient.DefaultConsumerGroupName, partitionId, position, connection.EventHubNamespace, eventHubName, new AzureSasCredential(connection.EventHubSasToken)),
-        AuthMethod.OAuth => new PartitionReceiver(
-            EventHubConsumerClient.DefaultConsumerGroupName,
-            partitionId,
-            position,
-            connection.EventHubNamespace,
-            eventHubName,
-            new ClientSecretCredential(connection.OAuth.TenantId, connection.OAuth.ClientId, connection.OAuth.ClientSecret)),
-        _ => throw new ArgumentOutOfRangeException(nameof(connection.EventHubAuthMethod), "Invalid Event Hub auth method"),
-    };
+        // Setting an OwnerLevel makes this an epoch receiver. Without it, the broker rejects the
+        // connection outright if any epoch receiver (e.g. an EventProcessorClient) is, or was very
+        // recently, attached to this partition/consumer group - even transiently during teardown.
+        // Using epoch 0 lets us connect and preempt a stale link instead of failing.
+        var options = new PartitionReceiverOptions { OwnerLevel = 0 };
+
+        return connection.EventHubAuthMethod switch
+        {
+            AuthMethod.ConnectionString => new PartitionReceiver(
+                consumerGroup, partitionId, position, connection.EventHubConnectionString, eventHubName, options),
+            AuthMethod.SasToken => new PartitionReceiver(
+                consumerGroup, partitionId, position, connection.EventHubNamespace, eventHubName, new AzureSasCredential(connection.EventHubSasToken), options),
+            AuthMethod.OAuth => new PartitionReceiver(
+                consumerGroup,
+                partitionId,
+                position,
+                connection.EventHubNamespace,
+                eventHubName,
+                new ClientSecretCredential(connection.OAuth.TenantId, connection.OAuth.ClientId, connection.OAuth.ClientSecret),
+                options),
+            _ => throw new ArgumentOutOfRangeException(nameof(connection.EventHubAuthMethod), "Invalid Event Hub auth method"),
+        };
+    }
 
     private static async Task<(long Sequence, string Offset)> ResolvePositionAsync(
         Connection connection, Input input, string partitionId, EventPosition position, CancellationToken cancellationToken)
     {
-        await using var receiver = CreatePartitionReceiver(connection, input.EventHubName, partitionId, position);
+        await using var receiver = CreatePartitionReceiver(connection, input.EventHubName, input.ConsumerGroup, partitionId, position);
         var events = await receiver.ReceiveBatchAsync(1, TimeSpan.FromSeconds(30), cancellationToken);
         var evt = events.FirstOrDefault();
         if (evt == null)
@@ -343,7 +355,7 @@ public static class AzureEventHub
     private static async Task<long?> TryGetExistingCheckpointSequenceAsync(
         BlobContainerClient containerClient, string eventHubNamespace, string eventHubName, string consumerGroup, string partitionId, CancellationToken cancellationToken)
     {
-        var blobName = $"{eventHubNamespace}/{eventHubName}/{consumerGroup}/checkpoint/{partitionId}";
+        var blobName = $"{eventHubNamespace}/{eventHubName}/{consumerGroup}/checkpoint/{partitionId}".ToLowerInvariant();
         var blobClient = containerClient.GetBlobClient(blobName);
 
         if (!await blobClient.ExistsAsync(cancellationToken))
@@ -363,7 +375,7 @@ public static class AzureEventHub
     private static async Task<bool> IsPartitionOwnedAsync(
         BlobContainerClient containerClient, string eventHubNamespace, string eventHubName, string consumerGroup, string partitionId, CancellationToken cancellationToken)
     {
-        var blobName = $"{eventHubNamespace}/{eventHubName}/{consumerGroup}/ownership/{partitionId}";
+        var blobName = $"{eventHubNamespace}/{eventHubName}/{consumerGroup}/ownership/{partitionId}".ToLowerInvariant();
         var blobClient = containerClient.GetBlobClient(blobName);
 
         if (!await blobClient.ExistsAsync(cancellationToken))
