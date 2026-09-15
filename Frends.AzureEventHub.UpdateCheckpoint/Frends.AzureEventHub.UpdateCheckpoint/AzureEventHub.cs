@@ -127,6 +127,13 @@ public static class AzureEventHub
                             break;
 
                         case TargetMode.RelativeRollback:
+                            if (target.RollbackEvents < 0)
+                            {
+                                throw new ArgumentOutOfRangeException(
+                                    nameof(target.RollbackEvents),
+                                    "RollbackEvents must be zero or greater.");
+                            }
+
                             if (!previousSequence.HasValue)
                             {
                                 throw new PartitionMissingException(
@@ -241,6 +248,8 @@ public static class AzureEventHub
             case AuthMethod.ConnectionString:
                 if (string.IsNullOrWhiteSpace(connection.EventHubConnectionString))
                     throw new ArgumentException("EventHubConnectionString must be provided when using ConnectionString Event Hub auth method.");
+                if (string.IsNullOrWhiteSpace(connection.EventHubNamespace))
+                    throw new ArgumentException("EventHubNamespace must be provided when using ConnectionString Event Hub auth method.");
                 break;
             case AuthMethod.SasToken:
                 if (string.IsNullOrWhiteSpace(connection.EventHubSasToken))

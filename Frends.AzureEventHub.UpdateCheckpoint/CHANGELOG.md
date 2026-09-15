@@ -9,7 +9,7 @@
 - `Options.FailIfPartitionMissing` is now respected when a RelativeRollback target has no existing checkpoint, setting it to true stops processing of any remaining partitions (already-applied changes are kept), while false continues processing the rest as before.
 - Checkpoints are now written through the supported `BlobCheckpointStore.UpdateCheckpointAsync` API instead of direct blob metadata manipulation.
 - Invalid partition IDs and out-of-range sequence numbers now produce clear, per-partition errors.
-- 
+
 ### Added
 
 - Absolute per-partition targeting via `Input.Targets`, allowing operators to set a specific `TargetSequenceNumber` or `TargetEnqueuedTime` per partition without manual arithmetic.
