@@ -22,16 +22,11 @@ public class Input
     public string ConsumerGroup { get; set; }
 
     /// <summary>
-    /// List of partition IDs to update.
+    /// Per-partition checkpoint targets. Each target selects a partition and a positioning mode
+    /// (relative rollback, absolute sequence number, or absolute enqueued time). At least one
+    /// target must be provided. The target position is validated automatically against the partition's available
+    /// sequence range, so no manual lookup of the current checkpoint or sequence numbers is required.
     /// </summary>
-    /// <example>[ "0", "1", "2" ]</example>
-    [DisplayFormat(DataFormatString = "Text")]
-    public string[] PartitionIds { get; set; }
-
-    /// <summary>
-    /// Number of events to roll back the checkpoint by (can be 0).
-    /// </summary>
-    /// <example>5</example>
-    [DisplayFormat(DataFormatString = "Text")]
-    public int RollbackEvents { get; set; }
+    /// <example>[ { "PartitionId": "0", "Mode": "AbsoluteSequenceNumber", "TargetSequenceNumber": 1500 } ]</example>
+    public PartitionTarget[] Targets { get; set; }
 }

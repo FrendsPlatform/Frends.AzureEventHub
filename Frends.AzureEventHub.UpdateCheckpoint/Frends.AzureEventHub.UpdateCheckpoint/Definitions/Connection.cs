@@ -62,4 +62,31 @@ public class Connection
     /// <example>{ "TenantId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "ClientId": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy" }</example>
     [UIHint(nameof(AuthMethod), "", AuthMethod.OAuth)]
     public OAuthConfig OAuth { get; set; }
+
+    /// <summary>
+    /// Authentication method used to connect to the Event Hub. The Event Hub connection is
+    /// required to resolve the partition's current sequence range and to support enqueued-time
+    /// targets. Defaults to OAuth using the Event Hub namespace and the OAuth configuration above.
+    /// </summary>
+    /// <example>OAuth</example>
+    [DefaultValue(AuthMethod.OAuth)]
+    public AuthMethod EventHubAuthMethod { get; set; } = AuthMethod.OAuth;
+
+    /// <summary>
+    /// Connection string to the Event Hub. Used if EventHubAuthMethod is ConnectionString.
+    /// </summary>
+    /// <example>Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=KeyName;SharedAccessKey=KeyValue</example>
+    [DisplayFormat(DataFormatString = "Text")]
+    [UIHint(nameof(EventHubAuthMethod), "", AuthMethod.ConnectionString)]
+    [PasswordPropertyText]
+    public string EventHubConnectionString { get; set; }
+
+    /// <summary>
+    /// SAS token for the Event Hub. Used if EventHubAuthMethod is SasToken.
+    /// </summary>
+    /// <example>?sv=2020-08-04&amp;ss=b&amp;sp=r</example>
+    [DisplayFormat(DataFormatString = "Text")]
+    [UIHint(nameof(EventHubAuthMethod), "", AuthMethod.SasToken)]
+    [PasswordPropertyText]
+    public string EventHubSasToken { get; set; }
 }

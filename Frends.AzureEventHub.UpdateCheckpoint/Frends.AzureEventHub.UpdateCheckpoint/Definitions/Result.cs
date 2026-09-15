@@ -45,4 +45,10 @@ public class Result
     /// </summary>
     /// <example>null</example>
     public Error Error { get; set; }
+
+    /// <summary>
+    /// Audit trail of applied checkpoint changes (partition, previous position, new position).
+    /// </summary>
+    /// <example>[ { "PartitionId": "0", "PreviousSequenceNumber": 1800, "NewSequenceNumber": 1500 } ]</example>
+    public AppliedTarget[] AppliedTargets { get; set; }
 }
