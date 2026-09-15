@@ -184,6 +184,42 @@ internal class IntegrationTest
         await CleanupContainer();
     }
 
+    [Test]
+    public async Task UpdateCheckpoints_Integration_FailIfPartitionOwned_ReturnsError()
+    {
+        SetupEnvironment();
+        await CreateContainer();
+        await SendEventsToPartition("0", 3);
+
+        // Start a processor and let it claim ownership of the partition, then attempt a
+        // checkpoint update while it is still actively running and owning the partition.
+        var processor = new EventProcessorClient(_container, _consumer, _eventHubConn);
+        processor.ProcessEventAsync += _ => Task.CompletedTask;
+        processor.ProcessErrorAsync += _ => Task.CompletedTask;
+
+        await processor.StartProcessingAsync();
+        await Task.Delay(5000);
+
+        try
+        {
+            _input.Targets = [new PartitionTarget { PartitionId = "0", Mode = TargetMode.AbsoluteSequenceNumber, TargetSequenceNumber = 0 }];
+            _opts.FailIfPartitionOwned = true;
+            _opts.ThrowErrorOnFailure = false;
+
+            var result = await AzureEventHub.UpdateCheckpoint(_input, _connection, _opts, CancellationToken.None);
+
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.SkippedPartitions, Contains.Item("0"));
+            Assert.That(result.Errors.Single().Message, Does.Contain("is currently owned by a running consumer"));
+        }
+        finally
+        {
+            await processor.StopProcessingAsync();
+        }
+
+        await CleanupContainer();
+    }
+
     private async Task CreateContainer()
     {
         _container = new BlobContainerClient(_blobConn, _containerName);
