@@ -283,7 +283,9 @@ internal class IntegrationTest
         }
         else
         {
-            await Task.WhenAny(tcs.Task, Task.Delay(15000));
+            var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(15000));
+            Assert.That(completedTask, Is.SameAs(tcs.Task), "Processor did not receive the required event count.");
+            await tcs.Task;
             await Task.Delay(1000);
         }
 
