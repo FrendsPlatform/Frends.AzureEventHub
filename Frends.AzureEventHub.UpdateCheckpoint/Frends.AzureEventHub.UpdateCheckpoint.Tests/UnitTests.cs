@@ -13,7 +13,7 @@ namespace Frends.AzureEventHub.UpdateCheckpoint.Tests;
 /// enqueued-time targeting, ownership) is covered in <see cref="IntegrationTest"/>.
 /// </summary>
 [TestFixture]
-public class UpdateCheckpointsTests
+public class UnitTests
 {
     [Test]
     public void UpdateCheckpoints_MissingEventHubName_ThrowsArgumentException()

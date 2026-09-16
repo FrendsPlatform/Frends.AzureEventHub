@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using Frends.AzureEventHub.UpdateCheckpoint.Attributes;
 
 namespace Frends.AzureEventHub.UpdateCheckpoint.Definitions;
 
@@ -15,6 +16,7 @@ public class PartitionTarget
     /// </summary>
     /// <example>0</example>
     [DisplayFormat(DataFormatString = "Text")]
+    [Required(ErrorMessage = "PartitionId must not be empty.")]
     public string PartitionId { get; set; }
 
     /// <summary>
@@ -33,6 +35,7 @@ public class PartitionTarget
     /// </summary>
     /// <example>5</example>
     [UIHint(nameof(Mode), "", TargetMode.RelativeRollback)]
+    [Range(0, int.MaxValue, ErrorMessage = "RollbackEvents must be zero or greater.")]
     public int RollbackEvents { get; set; }
 
     /// <summary>
@@ -41,6 +44,7 @@ public class PartitionTarget
     /// </summary>
     /// <example>1500</example>
     [UIHint(nameof(Mode), "", TargetMode.AbsoluteSequenceNumber)]
+    [RequiredIf(nameof(Mode), TargetMode.AbsoluteSequenceNumber, ErrorMessage = "TargetSequenceNumber is required when Mode is AbsoluteSequenceNumber.")]
     public long? TargetSequenceNumber { get; set; }
 
     /// <summary>
@@ -50,5 +54,6 @@ public class PartitionTarget
     /// </summary>
     /// <example>2026-01-01T00:00:00Z</example>
     [UIHint(nameof(Mode), "", TargetMode.AbsoluteEnqueuedTime)]
+    [RequiredIf(nameof(Mode), TargetMode.AbsoluteEnqueuedTime, ErrorMessage = "TargetEnqueuedTime is required when Mode is AbsoluteEnqueuedTime.")]
     public DateTimeOffset? TargetEnqueuedTime { get; set; }
 }

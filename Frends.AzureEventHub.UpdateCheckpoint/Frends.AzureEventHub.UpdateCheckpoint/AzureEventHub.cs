@@ -43,17 +43,14 @@ public static class AzureEventHub
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(input.EventHubName))
-                throw new ArgumentException("EventHubName is required", nameof(input.EventHubName));
+            ValidationHandler.Run(input, connection);
+            ValidationHandler.Run(input.Targets.Cast<object>().ToArray());
 
-            if (string.IsNullOrWhiteSpace(input.ConsumerGroup))
-                throw new ArgumentException("ConsumerGroup is required", nameof(input.ConsumerGroup));
+            if (connection.AuthMethod == AuthMethod.OAuth && connection.OAuth == null)
+                throw new ArgumentException("OAuth configuration must be provided when using OAuth auth method.");
 
-            if (input.Targets == null || input.Targets.Length == 0)
-                throw new ArgumentException("At least one Target is required", nameof(input.Targets));
-
-            ValidateStorageAuth(connection);
-            ValidateEventHubAuth(connection);
+            if (connection.EventHubAuthMethod == AuthMethod.OAuth && connection.OAuth == null)
+                throw new ArgumentException("OAuth configuration must be provided when using OAuth Event Hub auth method.");
 
             var containerClient = CreateContainerClient(connection);
             await containerClient.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
@@ -74,9 +71,6 @@ public static class AzureEventHub
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (string.IsNullOrWhiteSpace(partitionId))
-                        throw new ArgumentException("PartitionId must not be empty.");
-
                     PartitionProperties partitionProperties;
                     try
                     {
@@ -84,6 +78,8 @@ public static class AzureEventHub
                     }
                     catch (Exception ex)
                     {
+                        if (ex is OperationCanceledException) throw;
+
                         throw new InvalidOperationException(
                             $"Partition '{partitionId}' could not be resolved on Event Hub '{input.EventHubName}'. Verify the partition ID exists.", ex);
                     }
@@ -104,36 +100,17 @@ public static class AzureEventHub
                     switch (target.Mode)
                     {
                         case TargetMode.AbsoluteEnqueuedTime:
-                            if (!target.TargetEnqueuedTime.HasValue)
-                            {
-                                throw new ArgumentException(
-                                    $"Partition '{partitionId}' uses AbsoluteEnqueuedTime mode but TargetEnqueuedTime is not set.");
-                            }
-
                             (targetSequence, targetOffset) = await ResolvePositionAsync(
                                 connection, input, partitionId, EventPosition.FromEnqueuedTime(target.TargetEnqueuedTime.Value), cancellationToken);
                             break;
 
                         case TargetMode.AbsoluteSequenceNumber:
-                            if (!target.TargetSequenceNumber.HasValue)
-                            {
-                                throw new ArgumentException(
-                                    $"Partition '{partitionId}' uses AbsoluteSequenceNumber mode but TargetSequenceNumber is not set.");
-                            }
-
                             targetSequence = target.TargetSequenceNumber.Value;
                             ValidateInRange(partitionId, targetSequence, partitionProperties);
                             targetOffset = await ResolveOffsetForSequenceAsync(connection, input, partitionId, targetSequence, cancellationToken);
                             break;
 
                         case TargetMode.RelativeRollback:
-                            if (target.RollbackEvents < 0)
-                            {
-                                throw new ArgumentOutOfRangeException(
-                                    nameof(target.RollbackEvents),
-                                    "RollbackEvents must be zero or greater.");
-                            }
-
                             if (!previousSequence.HasValue)
                             {
                                 throw new PartitionMissingException(
@@ -141,10 +118,6 @@ public static class AzureEventHub
                             }
 
                             targetSequence = Math.Max(partitionProperties.BeginningSequenceNumber, previousSequence.Value - target.RollbackEvents);
-                            if (target.RollbackEvents > 0)
-                            {
-                                rollbackApplied = true;
-                            }
 
                             ValidateInRange(partitionId, targetSequence, partitionProperties);
                             targetOffset = await ResolveOffsetForSequenceAsync(connection, input, partitionId, targetSequence, cancellationToken);
@@ -165,6 +138,9 @@ public static class AzureEventHub
                         new CheckpointPosition(targetOffset, targetSequence),
                         cancellationToken);
 
+                    if (previousSequence.HasValue && targetSequence < previousSequence.Value)
+                        rollbackApplied = true;
+
                     updatedPartitions.Add(partitionId);
                     appliedTargets.Add(new AppliedTarget
                     {
@@ -175,6 +151,8 @@ public static class AzureEventHub
                 }
                 catch (Exception ex)
                 {
+                    if (ex is OperationCanceledException) throw;
+
                     skippedPartitions.Add(partitionId);
                     errorDetails.Add(new Error
                     {
@@ -213,58 +191,12 @@ public static class AzureEventHub
         }
         catch (Exception ex)
         {
+            if (ex is OperationCanceledException) throw;
+
             return ErrorHandler.Handle(
                 ex,
                 options.ThrowErrorOnFailure,
                 options.ErrorMessageOnFailure);
-        }
-    }
-
-    private static void ValidateStorageAuth(Connection connection)
-    {
-        switch (connection.AuthMethod)
-        {
-            case AuthMethod.ConnectionString:
-                if (string.IsNullOrWhiteSpace(connection.ConnectionString))
-                    throw new ArgumentException("ConnectionString must be provided when using ConnectionString auth method.");
-                break;
-            case AuthMethod.SasToken:
-                if (string.IsNullOrWhiteSpace(connection.SasToken))
-                    throw new ArgumentException("SasToken must be provided when using SasToken auth method.");
-                break;
-            case AuthMethod.OAuth:
-                if (connection.OAuth == null)
-                    throw new ArgumentException("OAuth configuration must be provided when using OAuth auth method.");
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(connection.AuthMethod), "Invalid authentication method.");
-        }
-    }
-
-    private static void ValidateEventHubAuth(Connection connection)
-    {
-        switch (connection.EventHubAuthMethod)
-        {
-            case AuthMethod.ConnectionString:
-                if (string.IsNullOrWhiteSpace(connection.EventHubConnectionString))
-                    throw new ArgumentException("EventHubConnectionString must be provided when using ConnectionString Event Hub auth method.");
-                if (string.IsNullOrWhiteSpace(connection.EventHubNamespace))
-                    throw new ArgumentException("EventHubNamespace must be provided when using ConnectionString Event Hub auth method.");
-                break;
-            case AuthMethod.SasToken:
-                if (string.IsNullOrWhiteSpace(connection.EventHubSasToken))
-                    throw new ArgumentException("EventHubSasToken must be provided when using SasToken Event Hub auth method.");
-                if (string.IsNullOrWhiteSpace(connection.EventHubNamespace))
-                    throw new ArgumentException("EventHubNamespace must be provided when using SasToken Event Hub auth method.");
-                break;
-            case AuthMethod.OAuth:
-                if (connection.OAuth == null)
-                    throw new ArgumentException("OAuth configuration must be provided when using OAuth Event Hub auth method.");
-                if (string.IsNullOrWhiteSpace(connection.EventHubNamespace))
-                    throw new ArgumentException("EventHubNamespace must be provided when using OAuth Event Hub auth method.");
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(connection.EventHubAuthMethod), "Invalid Event Hub authentication method.");
         }
     }
 

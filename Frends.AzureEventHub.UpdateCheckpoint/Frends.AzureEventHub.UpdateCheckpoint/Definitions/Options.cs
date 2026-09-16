@@ -38,7 +38,7 @@ public class Options
 
     /// <summary>
     /// True: Throw an exception.
-    /// False: Error will be added to the Result.Error.AdditionalInfo list instead of stopping the Task.
+    /// False: Error will be added to the Result.Errors list instead of stopping the Task.
     /// </summary>
     /// <example>true</example>
     [DefaultValue(true)]

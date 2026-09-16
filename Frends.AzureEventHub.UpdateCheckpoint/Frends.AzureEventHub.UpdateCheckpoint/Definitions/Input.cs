@@ -12,6 +12,7 @@ public class Input
     /// </summary>
     /// <example>myeventhub</example>
     [DisplayFormat(DataFormatString = "Text")]
+    [Required(ErrorMessage = "EventHubName is required")]
     public string EventHubName { get; set; }
 
     /// <summary>
@@ -19,6 +20,7 @@ public class Input
     /// </summary>
     /// <example>$Default</example>
     [DisplayFormat(DataFormatString = "Text")]
+    [Required(ErrorMessage = "ConsumerGroup is required")]
     public string ConsumerGroup { get; set; }
 
     /// <summary>
@@ -28,5 +30,7 @@ public class Input
     /// sequence range, so no manual lookup of the current checkpoint or sequence numbers is required.
     /// </summary>
     /// <example>[ { "PartitionId": "0", "Mode": "AbsoluteSequenceNumber", "TargetSequenceNumber": 1500 } ]</example>
+    [Required(ErrorMessage = "At least one Target is required")]
+    [MinLength(1, ErrorMessage = "At least one Target is required")]
     public PartitionTarget[] Targets { get; set; }
 }
