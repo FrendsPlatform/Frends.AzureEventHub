@@ -49,8 +49,7 @@ public static class AzureEventHub
 
         try
         {
-            ValidationHandler.Run(input, connection);
-            ValidationHandler.Run(input.Targets.Cast<object>().ToArray());
+            ValidationHandler.Run([input, connection, .. input.Targets]);
 
             if (connection.AuthMethod == AuthMethod.OAuth && connection.OAuth == null)
                 throw new ArgumentException("OAuth configuration must be provided when using OAuth auth method.");

@@ -32,5 +32,5 @@ public class Input
     /// <example>[ { "PartitionId": "0", "Mode": "AbsoluteSequenceNumber", "TargetSequenceNumber": 1500 } ]</example>
     [Required(ErrorMessage = "At least one Target is required")]
     [MinLength(1, ErrorMessage = "At least one Target is required")]
-    public PartitionTarget[] Targets { get; set; }
+    public PartitionTarget[] Targets { get; set; } = [];
 }
