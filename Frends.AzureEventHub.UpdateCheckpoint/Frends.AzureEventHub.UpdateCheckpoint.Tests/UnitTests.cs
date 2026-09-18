@@ -21,7 +21,7 @@ public class UnitTests
         var input = new Input { EventHubName = string.Empty, ConsumerGroup = "$Default", Targets = [new PartitionTarget { PartitionId = "0" }] };
         var options = new Options { ThrowErrorOnFailure = true };
 
-        var ex = Assert.ThrowsAsync<Exception>(() =>
+        var ex = Assert.CatchAsync<Exception>(() =>
             AzureEventHub.UpdateCheckpoint(input, ValidStorageConnection(), options, CancellationToken.None));
         Assert.That(ex.Message, Does.Contain("EventHubName is required"));
     }
@@ -32,7 +32,7 @@ public class UnitTests
         var input = new Input { EventHubName = "hub", ConsumerGroup = string.Empty, Targets = [new PartitionTarget { PartitionId = "0" }] };
         var options = new Options { ThrowErrorOnFailure = true };
 
-        var ex = Assert.ThrowsAsync<Exception>(() =>
+        var ex = Assert.CatchAsync<Exception>(() =>
             AzureEventHub.UpdateCheckpoint(input, ValidStorageConnection(), options, CancellationToken.None));
         Assert.That(ex.Message, Does.Contain("ConsumerGroup is required"));
     }
@@ -43,7 +43,7 @@ public class UnitTests
         var input = new Input { EventHubName = "hub", ConsumerGroup = "$Default" };
         var options = new Options { ThrowErrorOnFailure = true };
 
-        var ex = Assert.ThrowsAsync<Exception>(() =>
+        var ex = Assert.CatchAsync<Exception>(() =>
             AzureEventHub.UpdateCheckpoint(input, ValidStorageConnection(), options, CancellationToken.None));
         Assert.That(ex.Message, Does.Contain("At least one Target is required"));
     }
@@ -71,7 +71,7 @@ public class UnitTests
         connection.StorageAccountName = "test";
         var options = new Options { ThrowErrorOnFailure = true };
 
-        var ex = Assert.ThrowsAsync<Exception>(() =>
+        var ex = Assert.CatchAsync<Exception>(() =>
             AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
         Assert.That(ex.Message, Does.Contain("SasToken must be provided when using SasToken auth method"));
     }
@@ -86,7 +86,7 @@ public class UnitTests
         connection.StorageAccountName = "test";
         var options = new Options { ThrowErrorOnFailure = true };
 
-        var ex = Assert.ThrowsAsync<Exception>(() =>
+        var ex = Assert.CatchAsync<Exception>(() =>
             AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
         Assert.That(ex.Message, Does.Contain("OAuth configuration must be provided when using OAuth auth method"));
     }
@@ -100,7 +100,7 @@ public class UnitTests
         connection.EventHubConnectionString = null;
         var options = new Options { ThrowErrorOnFailure = true };
 
-        var ex = Assert.ThrowsAsync<Exception>(() =>
+        var ex = Assert.CatchAsync<Exception>(() =>
             AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
         Assert.That(ex.Message, Does.Contain("EventHubConnectionString must be provided"));
     }
@@ -114,7 +114,7 @@ public class UnitTests
         connection.OAuth = null;
         var options = new Options { ThrowErrorOnFailure = true };
 
-        var ex = Assert.ThrowsAsync<Exception>(() =>
+        var ex = Assert.CatchAsync<Exception>(() =>
             AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
         Assert.That(ex.Message, Does.Contain("OAuth configuration must be provided when using OAuth Event Hub auth method"));
     }
@@ -128,7 +128,7 @@ public class UnitTests
         connection.EventHubSasToken = null;
         var options = new Options { ThrowErrorOnFailure = true };
 
-        var ex = Assert.ThrowsAsync<Exception>(() =>
+        var ex = Assert.CatchAsync<Exception>(() =>
             AzureEventHub.UpdateCheckpoint(input, connection, options, CancellationToken.None));
         Assert.That(ex.Message, Does.Contain("EventHubSasToken must be provided"));
     }

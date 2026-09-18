@@ -41,6 +41,12 @@ public static class AzureEventHub
         [PropertyTab] Options options,
         CancellationToken cancellationToken)
     {
+        var updatedPartitions = new List<string>();
+        var skippedPartitions = new List<string>();
+        var errorDetails = new List<Error>();
+        var appliedTargets = new List<AppliedTarget>();
+        var rollbackApplied = false;
+
         try
         {
             ValidationHandler.Run(input, connection);
@@ -57,12 +63,6 @@ public static class AzureEventHub
 
             var checkpointStore = new BlobCheckpointStore(containerClient);
             await using var consumer = CreateConsumerClient(connection, input.EventHubName);
-
-            var updatedPartitions = new List<string>();
-            var skippedPartitions = new List<string>();
-            var errorDetails = new List<Error>();
-            var appliedTargets = new List<AppliedTarget>();
-            bool rollbackApplied = false;
 
             foreach (var target in input.Targets)
             {
@@ -169,14 +169,10 @@ public static class AzureEventHub
 
             if (errorDetails.Count > 0)
             {
-                return ErrorHandler.Handle(
-                    errorDetails,
-                    options.ThrowErrorOnFailure,
-                    "Failed to update one or more checkpoints.",
-                    updatedPartitions,
-                    skippedPartitions,
-                    rollbackApplied,
-                    appliedTargets);
+                var combinedMessage = string.Join("\n", errorDetails.Select(e => e.Message));
+                throw new Exception(
+                    $"Failed to update one or more checkpoints.\n{combinedMessage}",
+                    new AggregateException(errorDetails.Select(e => e.AdditionalInfo as Exception)));
             }
 
             return new Result
@@ -191,12 +187,12 @@ public static class AzureEventHub
         }
         catch (Exception ex)
         {
-            if (ex is OperationCanceledException) throw;
-
-            return ErrorHandler.Handle(
-                ex,
-                options.ThrowErrorOnFailure,
-                options.ErrorMessageOnFailure);
+            return ex.Handle(
+                options,
+                updatedPartitions.ToArray(),
+                skippedPartitions.ToArray(),
+                rollbackApplied,
+                appliedTargets.ToArray());
         }
     }
 
