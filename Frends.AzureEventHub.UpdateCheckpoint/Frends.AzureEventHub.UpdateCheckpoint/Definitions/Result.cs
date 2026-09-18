@@ -40,9 +40,8 @@ public class Result
     public Error[] Errors { get; set; }
 
     /// <summary>
-    /// Top-level error information when the overall task fails and ThrowErrorOnFailure is set to false.
-    /// For per-partition errors, see the Errors array.
+    /// Audit trail of applied checkpoint changes (partition, previous position, new position).
     /// </summary>
-    /// <example>null</example>
-    public Error Error { get; set; }
+    /// <example>[ { "PartitionId": "0", "PreviousSequenceNumber": 1800, "NewSequenceNumber": 1500 } ]</example>
+    public AppliedTarget[] AppliedTargets { get; set; }
 }

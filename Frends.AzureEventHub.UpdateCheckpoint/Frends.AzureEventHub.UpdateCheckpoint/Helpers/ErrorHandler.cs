@@ -1,6 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System;
+using System.Runtime.ExceptionServices;
 using Frends.AzureEventHub.UpdateCheckpoint.Definitions;
 
 namespace Frends.AzureEventHub.UpdateCheckpoint.Helpers;
@@ -11,58 +10,64 @@ namespace Frends.AzureEventHub.UpdateCheckpoint.Helpers;
 public static class ErrorHandler
 {
     /// <summary>
-    /// Handler for exception
+    /// Handler for exceptions.
     /// </summary>
-    /// <returns>Throw exception if a flag is true, else return Result with Error info</returns>
-    public static Result Handle(Exception exception, bool throwOnFailure, string errorMessage)
+    /// <returns>Throws exception if canceled, or if options.ThrowErrorOnFailure is true, else returns Result with Error info.</returns>
+    public static Result Handle(
+        this Exception exception,
+        Options options,
+        string[] updatedPartitions,
+        string[] skippedPartitions,
+        bool rollbackApplied,
+        AppliedTarget[] appliedTargets,
+        bool throwCanceled = true)
     {
-        if (throwOnFailure)
-        {
-            throw new Exception($"{errorMessage}\n{exception.Message}", exception);
-        }
+        ThrowIfCanceled(exception, throwCanceled);
+        if (options.ThrowErrorOnFailure) ThrowBaseException(exception, options.ErrorMessageOnFailure);
+
+        return ReturnResult(exception, options.ErrorMessageOnFailure, updatedPartitions, skippedPartitions, rollbackApplied, appliedTargets);
+    }
+
+    private static void ThrowIfCanceled(Exception exception, bool throwCanceled = true)
+    {
+        if (throwCanceled && exception is OperationCanceledException) ExceptionDispatchInfo.Capture(exception).Throw();
+    }
+
+    private static void ThrowBaseException(Exception exception, string customMessage = null)
+    {
+        if (string.IsNullOrEmpty(customMessage))
+            ExceptionDispatchInfo.Capture(exception).Throw();
+
+        throw new Exception(customMessage, exception);
+    }
+
+    private static Result ReturnResult(
+        Exception exception,
+        string customMessage,
+        string[] updatedPartitions,
+        string[] skippedPartitions,
+        bool rollbackApplied,
+        AppliedTarget[] appliedTargets)
+    {
+        var errorMessage = string.IsNullOrEmpty(customMessage)
+            ? exception.Message
+            : $"{customMessage}: {exception.Message}";
 
         return new Result
         {
             Success = false,
-            UpdatedPartitions = Array.Empty<string>(),
-            SkippedPartitions = Array.Empty<string>(),
-            RollbackApplied = false,
+            UpdatedPartitions = updatedPartitions,
+            SkippedPartitions = skippedPartitions,
+            RollbackApplied = rollbackApplied,
+            AppliedTargets = appliedTargets,
             Errors = new[]
             {
                 new Error
                 {
-                    Message = $"{errorMessage}\n{exception.Message}",
+                    Message = errorMessage,
                     AdditionalInfo = exception,
                 },
             },
-        };
-    }
-
-    /// <summary>
-    /// Handler for exceptions
-    /// </summary>
-    /// <returns>Throw exception if a flag is true, else return Result with Error info</returns>
-    public static Result Handle(
-            List<Error> errors,
-            bool throwOnFailure,
-            string errorMessage,
-            List<string> updatedPartitions,
-            List<string> skippedPartitions,
-            bool rollbackApplied)
-    {
-        if (throwOnFailure)
-        {
-            var combinedMessage = $"{errorMessage}\n{string.Join("\n", errors.Select(e => e.Message))}";
-            throw new Exception(combinedMessage, new AggregateException(errors.Select(e => e.AdditionalInfo as Exception)));
-        }
-
-        return new Result
-        {
-            Success = false,
-            UpdatedPartitions = updatedPartitions.ToArray(),
-            SkippedPartitions = skippedPartitions.ToArray(),
-            RollbackApplied = rollbackApplied,
-            Errors = errors.ToArray(),
         };
     }
 }
