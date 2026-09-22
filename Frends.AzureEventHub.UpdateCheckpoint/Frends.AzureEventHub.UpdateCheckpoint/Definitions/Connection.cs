@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using Frends.AzureEventHub.UpdateCheckpoint.Attributes;
 
 namespace Frends.AzureEventHub.UpdateCheckpoint.Definitions;
 
@@ -27,6 +28,7 @@ public class Connection
     /// </summary>
     /// <example>myeventhubnamespace</example>
     [DisplayFormat(DataFormatString = "Text")]
+    [Required(ErrorMessage = "EventHubNamespace must be provided.")]
     public string EventHubNamespace { get; set; }
 
     /// <summary>
@@ -43,6 +45,7 @@ public class Connection
     [DisplayFormat(DataFormatString = "Text")]
     [UIHint(nameof(AuthMethod), "", AuthMethod.ConnectionString)]
     [PasswordPropertyText]
+    [RequiredIf(nameof(AuthMethod), AuthMethod.ConnectionString, ErrorMessage = "ConnectionString must be provided when using ConnectionString auth method.")]
     public string ConnectionString { get; set; }
 
     /// <summary>
@@ -53,6 +56,7 @@ public class Connection
     [DisplayFormat(DataFormatString = "Text")]
     [UIHint(nameof(AuthMethod), "", AuthMethod.SasToken)]
     [PasswordPropertyText]
+    [RequiredIf(nameof(AuthMethod), AuthMethod.SasToken, ErrorMessage = "SasToken must be provided when using SasToken auth method.")]
     public string SasToken { get; set; }
 
     /// <summary>
@@ -62,4 +66,33 @@ public class Connection
     /// <example>{ "TenantId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "ClientId": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy" }</example>
     [UIHint(nameof(AuthMethod), "", AuthMethod.OAuth)]
     public OAuthConfig OAuth { get; set; }
+
+    /// <summary>
+    /// Authentication method used to connect to the Event Hub. The Event Hub connection is
+    /// required to resolve the partition's current sequence range and to support enqueued-time
+    /// targets. Defaults to OAuth using the Event Hub namespace and the OAuth configuration above.
+    /// </summary>
+    /// <example>OAuth</example>
+    [DefaultValue(AuthMethod.OAuth)]
+    public AuthMethod EventHubAuthMethod { get; set; } = AuthMethod.OAuth;
+
+    /// <summary>
+    /// Connection string to the Event Hub. Used if EventHubAuthMethod is ConnectionString.
+    /// </summary>
+    /// <example>Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=KeyName;SharedAccessKey=KeyValue</example>
+    [DisplayFormat(DataFormatString = "Text")]
+    [UIHint(nameof(EventHubAuthMethod), "", AuthMethod.ConnectionString)]
+    [PasswordPropertyText]
+    [RequiredIf(nameof(EventHubAuthMethod), AuthMethod.ConnectionString, ErrorMessage = "EventHubConnectionString must be provided when using ConnectionString Event Hub auth method.")]
+    public string EventHubConnectionString { get; set; }
+
+    /// <summary>
+    /// SAS token for the Event Hub. Used if EventHubAuthMethod is SasToken.
+    /// </summary>
+    /// <example>?sv=2020-08-04&amp;ss=b&amp;sp=r</example>
+    [DisplayFormat(DataFormatString = "Text")]
+    [UIHint(nameof(EventHubAuthMethod), "", AuthMethod.SasToken)]
+    [PasswordPropertyText]
+    [RequiredIf(nameof(EventHubAuthMethod), AuthMethod.SasToken, ErrorMessage = "EventHubSasToken must be provided when using SasToken Event Hub auth method.")]
+    public string EventHubSasToken { get; set; }
 }

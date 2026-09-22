@@ -12,6 +12,7 @@ public class Input
     /// </summary>
     /// <example>myeventhub</example>
     [DisplayFormat(DataFormatString = "Text")]
+    [Required(ErrorMessage = "EventHubName is required")]
     public string EventHubName { get; set; }
 
     /// <summary>
@@ -19,19 +20,17 @@ public class Input
     /// </summary>
     /// <example>$Default</example>
     [DisplayFormat(DataFormatString = "Text")]
+    [Required(ErrorMessage = "ConsumerGroup is required")]
     public string ConsumerGroup { get; set; }
 
     /// <summary>
-    /// List of partition IDs to update.
+    /// Per-partition checkpoint targets. Each target selects a partition and a positioning mode
+    /// (relative rollback, absolute sequence number, or absolute enqueued time). At least one
+    /// target must be provided. The target position is validated automatically against the partition's available
+    /// sequence range, so no manual lookup of the current checkpoint or sequence numbers is required.
     /// </summary>
-    /// <example>[ "0", "1", "2" ]</example>
-    [DisplayFormat(DataFormatString = "Text")]
-    public string[] PartitionIds { get; set; }
-
-    /// <summary>
-    /// Number of events to roll back the checkpoint by (can be 0).
-    /// </summary>
-    /// <example>5</example>
-    [DisplayFormat(DataFormatString = "Text")]
-    public int RollbackEvents { get; set; }
+    /// <example>[ { "PartitionId": "0", "Mode": "AbsoluteSequenceNumber", "TargetSequenceNumber": 1500 } ]</example>
+    [Required(ErrorMessage = "At least one Target is required")]
+    [MinLength(1, ErrorMessage = "At least one Target is required")]
+    public PartitionTarget[] Targets { get; set; } = [];
 }

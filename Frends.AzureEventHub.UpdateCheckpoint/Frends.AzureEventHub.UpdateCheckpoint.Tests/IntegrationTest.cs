@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -17,6 +16,8 @@ namespace Frends.AzureEventHub.UpdateCheckpoint.Tests;
 [TestFixture]
 internal class IntegrationTest
 {
+    private readonly List<string> _resumedEvents = [];
+
     private string _hubNamespace;
     private string _hubName;
     private string _consumer;
@@ -28,7 +29,6 @@ internal class IntegrationTest
     private Input _input;
     private Connection _connection;
     private Options _opts;
-    private List<string> _resumedEvents = [];
 
     public void SetupEnvironment()
     {
@@ -45,40 +45,177 @@ internal class IntegrationTest
             ConnectionString = _blobConn,
             ContainerName = _containerName,
             EventHubNamespace = _hubNamespace,
+            EventHubAuthMethod = AuthMethod.ConnectionString,
+            EventHubConnectionString = _eventHubConn,
         };
 
         _input = new Input
         {
             EventHubName = _hubName,
             ConsumerGroup = _consumer,
-            PartitionIds = ["0"],
-            RollbackEvents = 1,
+            Targets = [new PartitionTarget { PartitionId = "0", Mode = TargetMode.RelativeRollback, RollbackEvents = 1 }],
         };
 
-        _opts = new Options { FailIfPartitionMissing = true };
+        _opts = new Options { FailIfPartitionMissing = true, FailIfPartitionOwned = false };
     }
 
     [Test]
     public async Task UpdateCheckpoints_Integration_EventProcessorResumesFromUpdatedCheckpoint()
     {
-        // ARRANGE
         SetupEnvironment();
         await CreateContainer();
         await SendEventsToPartition("0", 5);
 
         var sequenceNumber = await RunProcessor(3, false, false);
-        await CreateCheckpoint(sequenceNumber);
 
-        // ACT
-        await AzureEventHub.UpdateCheckpoint(_input, _connection, _opts, CancellationToken.None);
+        // ACT – relative rollback by 1 event.
+        var result = await AzureEventHub.UpdateCheckpoint(_input, _connection, _opts, CancellationToken.None);
 
-        // ASSERT – checkpoint value changed correctly
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.RollbackApplied, Is.True);
+        Assert.That(result.AppliedTargets.Length, Is.EqualTo(1));
+        Assert.That(result.AppliedTargets[0].NewSequenceNumber, Is.EqualTo(sequenceNumber - 1));
+
         var updated = await GetCheckpointSequence();
         Assert.That(updated, Is.EqualTo(sequenceNumber - 1));
 
-        // ASSERT – processor resumes from updated checkpoint
+        // ASSERT – processor resumes from updated checkpoint.
         await RunProcessor(2, true, true);
         Assert.That(_resumedEvents.Count, Is.GreaterThan(0));
+
+        await CleanupContainer();
+    }
+
+    [Test]
+    public async Task UpdateCheckpoints_Integration_AbsoluteSequenceTarget_SetsCheckpoint()
+    {
+        SetupEnvironment();
+        await CreateContainer();
+        await SendEventsToPartition("0", 5);
+
+        var lastSequence = await RunProcessor(5, false, false);
+        var targetSequence = lastSequence - 2;
+
+        _input.Targets = [new PartitionTarget { PartitionId = "0", Mode = TargetMode.AbsoluteSequenceNumber, TargetSequenceNumber = targetSequence }];
+
+        var result = await AzureEventHub.UpdateCheckpoint(_input, _connection, _opts, CancellationToken.None);
+
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.AppliedTargets.Single().NewSequenceNumber, Is.EqualTo(targetSequence));
+        Assert.That(await GetCheckpointSequence(), Is.EqualTo(targetSequence));
+
+        await CleanupContainer();
+    }
+
+    [Test]
+    public async Task UpdateCheckpoints_Integration_OutOfRangeSequence_ReturnsError()
+    {
+        SetupEnvironment();
+        await CreateContainer();
+        await SendEventsToPartition("0", 3);
+        await RunProcessor(3, false, false);
+
+        _input.Targets = [new PartitionTarget { PartitionId = "0", Mode = TargetMode.AbsoluteSequenceNumber, TargetSequenceNumber = long.MaxValue }];
+        _opts.ThrowErrorOnFailure = false;
+
+        var result = await AzureEventHub.UpdateCheckpoint(_input, _connection, _opts, CancellationToken.None);
+
+        Assert.That(result.Success, Is.False);
+        Assert.That(result.SkippedPartitions, Contains.Item("0"));
+        Assert.That(result.Errors.Single().Message, Does.Contain("outside the valid range"));
+
+        await CleanupContainer();
+    }
+
+    [Test]
+    public async Task UpdateCheckpoints_Integration_InvalidPartition_ReturnsError()
+    {
+        SetupEnvironment();
+        await CreateContainer();
+
+        _input.Targets = [new PartitionTarget { PartitionId = "999", Mode = TargetMode.AbsoluteSequenceNumber, TargetSequenceNumber = 1 }];
+        _opts.ThrowErrorOnFailure = false;
+
+        var result = await AzureEventHub.UpdateCheckpoint(_input, _connection, _opts, CancellationToken.None);
+
+        Assert.That(result.Success, Is.False);
+        Assert.That(result.SkippedPartitions, Contains.Item("999"));
+        Assert.That(result.Errors.Single().Message, Does.Contain("could not be resolved"));
+
+        await CleanupContainer();
+    }
+
+    [Test]
+    public async Task UpdateCheckpoints_Integration_EnqueuedTimeTarget_SetsCheckpoint()
+    {
+        SetupEnvironment();
+        await CreateContainer();
+        await SendEventsToPartition("0", 5);
+        await RunProcessor(5, false, false);
+
+        _input.Targets = [new PartitionTarget { PartitionId = "0", Mode = TargetMode.AbsoluteEnqueuedTime, TargetEnqueuedTime = DateTimeOffset.UtcNow.AddMinutes(-30) }];
+
+        var result = await AzureEventHub.UpdateCheckpoint(_input, _connection, _opts, CancellationToken.None);
+
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.AppliedTargets.Single().PartitionId, Is.EqualTo("0"));
+
+        await CleanupContainer();
+    }
+
+    [Test]
+    public async Task UpdateCheckpoints_Integration_RelativeRollbackWithNoExistingCheckpoint_ReturnsError()
+    {
+        SetupEnvironment();
+        await CreateContainer();
+        await SendEventsToPartition("0", 3);
+
+        // No processor has run yet, so no checkpoint exists for this partition/consumer group.
+        _input.Targets = [new PartitionTarget { PartitionId = "0", Mode = TargetMode.RelativeRollback, RollbackEvents = 1 }];
+        _opts.FailIfPartitionMissing = true;
+        _opts.ThrowErrorOnFailure = false;
+
+        var result = await AzureEventHub.UpdateCheckpoint(_input, _connection, _opts, CancellationToken.None);
+
+        Assert.That(result.Success, Is.False);
+        Assert.That(result.SkippedPartitions, Contains.Item("0"));
+        Assert.That(result.Errors.Single().Message, Does.Contain("has no current sequence number to roll back from"));
+
+        await CleanupContainer();
+    }
+
+    [Test]
+    public async Task UpdateCheckpoints_Integration_FailIfPartitionOwned_ReturnsError()
+    {
+        SetupEnvironment();
+        await CreateContainer();
+        await SendEventsToPartition("0", 3);
+
+        // Start a processor and let it claim ownership of the partition, then attempt a
+        // checkpoint update while it is still actively running and owning the partition.
+        var processor = new EventProcessorClient(_container, _consumer, _eventHubConn);
+        processor.ProcessEventAsync += _ => Task.CompletedTask;
+        processor.ProcessErrorAsync += _ => Task.CompletedTask;
+
+        await processor.StartProcessingAsync();
+        await Task.Delay(5000);
+
+        try
+        {
+            _input.Targets = [new PartitionTarget { PartitionId = "0", Mode = TargetMode.AbsoluteSequenceNumber, TargetSequenceNumber = 0 }];
+            _opts.FailIfPartitionOwned = true;
+            _opts.ThrowErrorOnFailure = false;
+
+            var result = await AzureEventHub.UpdateCheckpoint(_input, _connection, _opts, CancellationToken.None);
+
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.SkippedPartitions, Contains.Item("0"));
+            Assert.That(result.Errors.Single().Message, Does.Contain("is currently owned by a running consumer"));
+        }
+        finally
+        {
+            await processor.StopProcessingAsync();
+        }
 
         await CleanupContainer();
     }
@@ -101,19 +238,9 @@ internal class IntegrationTest
         await producer.DisposeAsync();
     }
 
-    private async Task CreateCheckpoint(long seq)
-    {
-        var blob = _container.GetBlobClient($"{_hubNamespace}/{_hubName}/{_consumer}/checkpoint/0");
-        await blob.UploadAsync(new MemoryStream(), metadata: new Dictionary<string, string>
-        {
-            ["offset"] = "1000",
-            ["sequencenumber"] = seq.ToString(),
-        });
-    }
-
     private async Task<long> GetCheckpointSequence()
     {
-        var blob = _container.GetBlobClient($"{_hubNamespace}/{_hubName}/{_consumer}/checkpoint/0");
+        var blob = _container.GetBlobClient($"{_hubNamespace}/{_hubName}/{_consumer}/checkpoint/0".ToLowerInvariant());
         var props = await blob.GetPropertiesAsync();
         return long.Parse(props.Value.Metadata["sequencenumber"]);
     }
@@ -128,7 +255,7 @@ internal class IntegrationTest
 
         var processor = new EventProcessorClient(_container, _consumer, _eventHubConn);
 
-        processor.ProcessEventAsync += args =>
+        processor.ProcessEventAsync += async args =>
         {
             read.Add(args.Data);
 
@@ -138,10 +265,10 @@ internal class IntegrationTest
                 _resumedEvents.Add(text);
             }
 
+            await args.UpdateCheckpointAsync();
+
             if (read.Count >= eventCountRequired)
                 tcs.TrySetResult(true);
-
-            return Task.CompletedTask;
         };
 
         processor.ProcessErrorAsync += _ => Task.CompletedTask;
@@ -156,6 +283,8 @@ internal class IntegrationTest
         }
         else
         {
+            var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(15000));
+            Assert.That(completedTask, Is.SameAs(tcs.Task), "Processor did not receive the required event count.");
             await tcs.Task;
             await Task.Delay(1000);
         }
