@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.0] - 2026-09-29
+
+### Added
+
+- Failure results now include a top-level error detail alongside the per-partition error list.
+
 ## [2.0.0] - 2026-09-11
 
 ### Changed

@@ -57,6 +57,8 @@ public class UnitTests
         var result = await AzureEventHub.UpdateCheckpoint(input, ValidStorageConnection(), options, CancellationToken.None);
 
         Assert.That(result.Success, Is.False);
+        Assert.That(result.Error, Is.Not.Null);
+        Assert.That(result.Error.Message, Does.Contain("At least one Target is required"));
         Assert.That(result.Errors, Is.Not.Empty);
         Assert.That(result.Errors[0].Message, Does.Contain("At least one Target is required"));
     }

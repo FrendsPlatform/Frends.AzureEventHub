@@ -40,6 +40,12 @@ public class Result
     public Error[] Errors { get; set; }
 
     /// <summary>
+    /// Error details for the failed operation. Null when the operation succeeds.
+    /// </summary>
+    /// <example>{ "Message": "Failed to update one or more checkpoints." }</example>
+    public Error Error { get; set; }
+
+    /// <summary>
     /// Audit trail of applied checkpoint changes (partition, previous position, new position).
     /// </summary>
     /// <example>[ { "PartitionId": "0", "PreviousSequenceNumber": 1800, "NewSequenceNumber": 1500 } ]</example>
