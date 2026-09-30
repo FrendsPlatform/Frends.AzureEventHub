@@ -1,10 +1,10 @@
 # Changelog
 
-## [2.1.0] - 2026-09-29
+## [3.0.0] - 2026-09-29
 
-### Added
+### Changed
 
-- Failure results now include a top-level error detail alongside the per-partition error list.
+- [Breaking Change] Move `Result.Errors` to `Result.Error` and use AggregateException in case of multiple errors
 
 ## [2.0.0] - 2026-09-11
 

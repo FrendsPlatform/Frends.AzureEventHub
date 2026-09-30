@@ -66,7 +66,6 @@ public static class ErrorHandler
             SkippedPartitions = skippedPartitions,
             RollbackApplied = rollbackApplied,
             AppliedTargets = appliedTargets,
-            Errors = new[] { error },
         };
     }
 }

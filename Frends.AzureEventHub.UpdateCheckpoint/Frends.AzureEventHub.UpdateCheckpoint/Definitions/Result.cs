@@ -34,13 +34,8 @@ public class Result
     public bool RollbackApplied { get; set; }
 
     /// <summary>
-    /// List of error messages, if any, per partition.
-    /// </summary>
-    /// <example>[ { "PartitionId": "2", "Error": "Checkpoint not found." } ]</example>
-    public Error[] Errors { get; set; }
-
-    /// <summary>
-    /// Error details for the failed operation. Null when the operation succeeds.
+    /// Error details for the failed operation. Partition failures are grouped in
+    /// an AggregateException in AdditionalInfo. Null when the operation succeeds.
     /// </summary>
     /// <example>{ "Message": "Failed to update one or more checkpoints." }</example>
     public Error Error { get; set; }
