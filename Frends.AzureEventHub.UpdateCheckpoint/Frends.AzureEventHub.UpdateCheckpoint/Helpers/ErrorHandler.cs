@@ -52,22 +52,20 @@ public static class ErrorHandler
         var errorMessage = string.IsNullOrEmpty(customMessage)
             ? exception.Message
             : $"{customMessage}: {exception.Message}";
+        var error = new Error
+        {
+            Message = errorMessage,
+            AdditionalInfo = exception,
+        };
 
         return new Result
         {
             Success = false,
+            Error = error,
             UpdatedPartitions = updatedPartitions,
             SkippedPartitions = skippedPartitions,
             RollbackApplied = rollbackApplied,
             AppliedTargets = appliedTargets,
-            Errors = new[]
-            {
-                new Error
-                {
-                    Message = errorMessage,
-                    AdditionalInfo = exception,
-                },
-            },
         };
     }
 }

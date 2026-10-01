@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.0] - 2026-09-29
+
+### Changed
+
+- [Breaking Change] Move `Result.Errors` to `Result.Error` and use AggregateException in case of multiple errors
+
 ## [2.0.0] - 2026-09-11
 
 ### Changed

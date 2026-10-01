@@ -14,7 +14,7 @@ public class Error
     public string Message { get; set; }
 
     /// <summary>
-    /// Additional information about the error.
+    /// The original exception, or an AggregateException containing per-partition failures.
     /// </summary>
     /// <example>object { Exception Exception }</example>
     public Exception AdditionalInfo { get; set; }

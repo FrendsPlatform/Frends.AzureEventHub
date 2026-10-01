@@ -33,7 +33,7 @@ public static class AzureEventHub
     /// <param name="options">Optional behavior configurations.</param>
     /// <param name="cancellationToken">A cancellation token provided by the Frends platform.</param>
     /// <returns>
-    /// Result { bool Success, string[] UpdatedPartitions, string[] SkippedPartitions, bool RollbackApplied, Error[] Errors, Error Error, AppliedTarget[] AppliedTargets }
+    /// Result { bool Success, string[] UpdatedPartitions, string[] SkippedPartitions, bool RollbackApplied, Error Error, AppliedTarget[] AppliedTargets }
     /// </returns>
     public static async Task<Result> UpdateCheckpoint(
         [PropertyTab] Input input,
@@ -43,7 +43,7 @@ public static class AzureEventHub
     {
         var updatedPartitions = new List<string>();
         var skippedPartitions = new List<string>();
-        var errorDetails = new List<Error>();
+        var partitionErrors = new List<Exception>();
         var appliedTargets = new List<AppliedTarget>();
         var rollbackApplied = false;
 
@@ -153,11 +153,8 @@ public static class AzureEventHub
                     if (ex is OperationCanceledException) throw;
 
                     skippedPartitions.Add(partitionId);
-                    errorDetails.Add(new Error
-                    {
-                        Message = $"Failed to update checkpoint for partition {partitionId}: {ex.Message}",
-                        AdditionalInfo = ex,
-                    });
+                    partitionErrors.Add(new InvalidOperationException(
+                        $"Failed to update checkpoint for partition {partitionId}: {ex.Message}", ex));
 
                     if (ex is PartitionMissingException && options.FailIfPartitionMissing)
                     {
@@ -166,12 +163,10 @@ public static class AzureEventHub
                 }
             }
 
-            if (errorDetails.Count > 0)
+            if (partitionErrors.Count > 0)
             {
-                var combinedMessage = string.Join("\n", errorDetails.Select(e => e.Message));
-                throw new Exception(
-                    $"Failed to update one or more checkpoints.\n{combinedMessage}",
-                    new AggregateException(errorDetails.Select(e => e.AdditionalInfo as Exception)));
+                var combinedMessage = string.Join("\n", partitionErrors.Select(e => e.Message));
+                throw new AggregateException($"Failed to update one or more checkpoints.\n{combinedMessage}", partitionErrors);
             }
 
             return new Result
@@ -180,7 +175,6 @@ public static class AzureEventHub
                 UpdatedPartitions = updatedPartitions.ToArray(),
                 SkippedPartitions = skippedPartitions.ToArray(),
                 RollbackApplied = rollbackApplied,
-                Errors = Array.Empty<Error>(),
                 AppliedTargets = appliedTargets.ToArray(),
             };
         }

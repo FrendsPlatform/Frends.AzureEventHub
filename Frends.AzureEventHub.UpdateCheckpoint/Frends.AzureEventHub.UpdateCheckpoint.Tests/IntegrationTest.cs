@@ -122,7 +122,8 @@ internal class IntegrationTest
 
         Assert.That(result.Success, Is.False);
         Assert.That(result.SkippedPartitions, Contains.Item("0"));
-        Assert.That(result.Errors.Single().Message, Does.Contain("outside the valid range"));
+        Assert.That(result.Error.Message, Does.Contain("outside the valid range"));
+        Assert.That(((AggregateException)result.Error.AdditionalInfo).InnerExceptions.Single().InnerException, Is.TypeOf<ArgumentOutOfRangeException>());
 
         await CleanupContainer();
     }
@@ -140,7 +141,8 @@ internal class IntegrationTest
 
         Assert.That(result.Success, Is.False);
         Assert.That(result.SkippedPartitions, Contains.Item("999"));
-        Assert.That(result.Errors.Single().Message, Does.Contain("could not be resolved"));
+        Assert.That(result.Error.Message, Does.Contain("could not be resolved"));
+        Assert.That(((AggregateException)result.Error.AdditionalInfo).InnerExceptions.Single().Message, Does.Contain("999"));
 
         await CleanupContainer();
     }
@@ -179,7 +181,7 @@ internal class IntegrationTest
 
         Assert.That(result.Success, Is.False);
         Assert.That(result.SkippedPartitions, Contains.Item("0"));
-        Assert.That(result.Errors.Single().Message, Does.Contain("has no current sequence number to roll back from"));
+        Assert.That(result.Error.Message, Does.Contain("has no current sequence number to roll back from"));
 
         await CleanupContainer();
     }
@@ -210,7 +212,7 @@ internal class IntegrationTest
 
             Assert.That(result.Success, Is.False);
             Assert.That(result.SkippedPartitions, Contains.Item("0"));
-            Assert.That(result.Errors.Single().Message, Does.Contain("is currently owned by a running consumer"));
+            Assert.That(result.Error.Message, Does.Contain("is currently owned by a running consumer"));
         }
         finally
         {

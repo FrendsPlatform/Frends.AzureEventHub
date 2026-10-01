@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Frends.AzureEventHub.UpdateCheckpoint.Definitions;
+using Frends.AzureEventHub.UpdateCheckpoint.Helpers;
 using NUnit.Framework;
 
 namespace Frends.AzureEventHub.UpdateCheckpoint.Tests;
@@ -57,8 +58,47 @@ public class UnitTests
         var result = await AzureEventHub.UpdateCheckpoint(input, ValidStorageConnection(), options, CancellationToken.None);
 
         Assert.That(result.Success, Is.False);
-        Assert.That(result.Errors, Is.Not.Empty);
-        Assert.That(result.Errors[0].Message, Does.Contain("At least one Target is required"));
+        Assert.That(result.Error, Is.Not.Null);
+        Assert.That(result.Error.Message, Does.Contain("At least one Target is required"));
+        Assert.That(result.Error.AdditionalInfo, Is.Not.TypeOf<AggregateException>());
+        Assert.That(result.Error.AdditionalInfo.Message, Does.Contain("At least one Target is required"));
+    }
+
+    [Test]
+    public void UpdateCheckpoints_ResultContainsOnlyOneErrorProperty()
+    {
+        Assert.That(typeof(Result).GetProperty("Error"), Is.Not.Null);
+        Assert.That(typeof(Result).GetProperty("Errors"), Is.Null);
+    }
+
+    [Test]
+    public void AggregateFailure_ReturnsAggregateInError()
+    {
+        var first = new InvalidOperationException("Partition 0 failed");
+        var second = new ArgumentException("Partition 1 failed");
+        var aggregate = new AggregateException("Failed to update one or more checkpoints.", first, second);
+        var result = aggregate.Handle(
+            new Options { ThrowErrorOnFailure = false, ErrorMessageOnFailure = "Custom failure" },
+            [],
+            ["0", "1"],
+            false,
+            []);
+
+        Assert.That(result.Success, Is.False);
+        Assert.That(result.Error.Message, Does.Contain("Custom failure"));
+        Assert.That(result.Error.AdditionalInfo, Is.SameAs(aggregate));
+        Assert.That(((AggregateException)result.Error.AdditionalInfo).InnerExceptions, Is.EqualTo(new Exception[] { first, second }));
+    }
+
+    [Test]
+    public void AggregateFailure_ThrowsOriginalAggregateWhenConfigured()
+    {
+        var aggregate = new AggregateException("Failed to update one or more checkpoints.", new InvalidOperationException("Partition 0 failed"));
+
+        var thrown = Assert.Throws<AggregateException>(() =>
+            aggregate.Handle(new Options { ThrowErrorOnFailure = true }, [], ["0"], false, []));
+
+        Assert.That(thrown, Is.SameAs(aggregate));
     }
 
     [Test]
